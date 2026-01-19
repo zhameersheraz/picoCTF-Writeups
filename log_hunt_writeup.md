@@ -1,3 +1,11 @@
+# Log Hunt - picoCTF Writeup
+
+**Challenge:** Log Hunt  
+**Category:** General Skills  
+**Difficulty:** Easy  
+**Points:** (not specified)  
+**Flag:** `picoCTF{us3_y0urlinux_sk1lls_cedfa5fb}`
+
 ---
 
 # Log Hunt - picoCTF Writeup
