@@ -1,24 +1,22 @@
-# Inspect Me - picoCTF Writeup
+# Cookies - picoCTF Writeup
 
-**Challenge:** Inspect Me  
+**Challenge:** Cookies  
 **Category:** Web Exploitation  
 **Difficulty:** Easy  
 **Points:** (not specified)  
-**Flag:** `picoCTF{tru3_d3t3ct1ve_0r_ju5t_lucky?302945a7}`
+**Flag:** `picoCTF{3v3ry1_l0v3s_c00k135_a4dadb49}`
 
 ---
 
 ## Description
 
-This website is hiding something. Can you find it by inspecting the page?
+Who doesn't love cookies? Try to figure out the best one.
 
 ---
 
 ## Hints
 
-1. The flag is split across multiple files
-2. Check HTML, CSS, and JavaScript files
-3. Use "View Page Source" or Developer Tools
+(None)
 
 ---
 
@@ -28,140 +26,128 @@ This website is hiding something. Can you find it by inspecting the page?
 
 I navigated to the challenge URL:
 ```
-http://fickle-tempest.picoctf.net:49923/
+http://wily-courier.picoctf.net:61983/
 ```
 
-Or used:
+The page displayed a cookie search page with the text:
 ```
-view-source:http://fickle-tempest.picoctf.net:49923/
-```
-
-The page showed a simple website with two tabs: "What" and "How".
-
-### Step 2: View Page Source (Find Part 1/3)
-
-I pressed `Ctrl+U` to view the page source. Inside the HTML, I found a comment:
-```html
-<!-- Html is neat. Anyways have 1/3 of the flag: picoCTF{tru3_d3 -->
+Welcome to my cookie search page. See how much I like different kinds of cookies!
 ```
 
-**Part 1/3:** `picoCTF{tru3_d3`
+There was a search box with "snickerdoodle" already typed in.
 
-### Step 3: Check the CSS File (Find Part 2/3)
+### Step 2: Search for Snickerdoodle
 
-I noticed the HTML linked to an external CSS file:
-```html
-<link rel="stylesheet" type="text/css" href="mycss.css">
+I clicked the **Search** button and the page displayed:
+```
+I love snickerdoodle cookies!
 ```
 
-I clicked on `mycss.css` or navigated to:
+But no flag appeared. This means I need to try different cookies.
+
+### Step 3: Inspect the Cookies
+
+I pressed `F12` to open Developer Tools and went to the **Application** tab (or **Storage** tab in Firefox).
+
+Under **Storage** → **Cookies** → `http://wily-courier.picoctf.net:61983/`, I found a cookie:
+
+- **Name:** `name`
+- **Value:** `0`
+
+### Step 4: Change Cookie Values
+
+I realized the cookie value controls which cookie type is displayed. I started changing the value manually:
+
+- **Value: 0** → "I love snickerdoodle cookies!"
+- **Value: 1** → "I love chocolate chip cookies!"
+- **Value: 2** → "I love oatmeal raisin cookies!"
+- **Value: 3** → "I love peanut butter cookies!"
+- ...and so on
+
+After each change, I refreshed the page (`F5`) to see the new result.
+
+### Step 5: Find the Flag
+
+I continued incrementing the cookie value:
 ```
-http://fickle-tempest.picoctf.net:49923/mycss.css
-```
-
-At the bottom of the CSS file, I found a comment:
-```css
-/* You need CSS to make pretty pages. Here's part 2/3 of the flag: t3ct1ve_0r_ju5t */
-```
-
-**Part 2/3:** `t3ct1ve_0r_ju5t`
-
-### Step 4: Check the JavaScript File (Find Part 3/3)
-
-The HTML also linked to a JavaScript file:
-```html
-<script type="application/javascript" src="myjs.js"></script>
-```
-
-I clicked on `myjs.js` or navigated to:
-```
-http://fickle-tempest.picoctf.net:49923/myjs.js
-```
-
-At the bottom of the JavaScript file, I found:
-```javascript
-/* Javascript sure is neat. Anyways part 3/3 of the flag: _lucky?302945a7} */
-```
-
-**Part 3/3:** `_lucky?302945a7}`
-
-### Step 5: Combine All Parts
-
-I combined all three parts in order:
-```
-Part 1: picoCTF{tru3_d3
-Part 2: t3ct1ve_0r_ju5t
-Part 3: _lucky?302945a7}
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18...
 ```
 
-**Complete Flag:** `picoCTF{tru3_d3t3ct1ve_0r_ju5t_lucky?302945a7}`
+When I set the cookie value to **18** and refreshed the page, the flag appeared:
+```
+Flag: picoCTF{3v3ry1_l0v3s_c00k135_a4dadb49}
+```
 
 ---
 
 ## Why This Works
 
-* Web pages consist of three main components: **HTML** (structure), **CSS** (styling), and **JavaScript** (functionality)
-* Each file can contain comments that are invisible to users but visible in source code
-* Developers sometimes leave notes or sensitive information in these files
-* **Always inspect all linked resources**, not just the main HTML page
-* This challenge teaches you to thoroughly examine all parts of a website
+* **Cookies** are small pieces of data stored in your browser by websites
+* They can store session information, preferences, or tracking data
+* Developers sometimes use cookies to control application behavior
+* In this challenge, the cookie value determines which response is shown
+* By manipulating the cookie value, we can access different pages/responses
+* **Never trust client-side data** - users can modify cookies at any time
 
 ---
 
-## File Breakdown
+## What are Cookies?
 
-| File | Purpose | Flag Part |
-|------|---------|-----------|
-| **index.html** | Page structure | Part 1/3: `picoCTF{tru3_d3` |
-| **mycss.css** | Styling | Part 2/3: `t3ct1ve_0r_ju5t` |
-| **myjs.js** | Functionality | Part 3/3: `_lucky?302945a7}` |
+Cookies are key-value pairs stored by your browser for each website:
+* **Session cookies:** Temporary, deleted when browser closes
+* **Persistent cookies:** Stored for a set time period
+* **Security note:** Sensitive data should never be stored in cookies without encryption
+
+**Common cookie uses:**
+- Login sessions
+- Shopping cart data
+- User preferences
+- Tracking/analytics
 
 ---
 
-## Navigation Methods
+## Steps to Modify Cookies
 
-### Method 1: View Source
+### Method 1: Browser DevTools (Used in this challenge)
 ```
-1. Press Ctrl+U (View Page Source)
-2. Look for linked files (href="mycss.css", src="myjs.js")
-3. Click on each file to view its contents
-```
-
-### Method 2: Developer Tools
-```
-1. Press F12 (Open Developer Tools)
-2. Go to "Sources" or "Debugger" tab
-3. Expand the file tree to see all resources
-4. Click on mycss.css and myjs.js to view contents
+1. Press F12 to open Developer Tools
+2. Go to Application tab (Chrome) or Storage tab (Firefox)
+3. Expand Cookies → Select the website
+4. Double-click the Value field to edit
+5. Change the value
+6. Refresh the page (F5)
 ```
 
-### Method 3: Direct URL Access
-```
-http://fickle-tempest.picoctf.net:49923/mycss.css
-http://fickle-tempest.picoctf.net:49923/myjs.js
+### Method 2: Using Console
+```javascript
+// Set a cookie
+document.cookie = "name=18";
+
+// View all cookies
+console.log(document.cookie);
 ```
 
 ---
 
 ## Flag
 
-`picoCTF{tru3_d3t3ct1ve_0r_ju5t_lucky?302945a7}`
+`picoCTF{3v3ry1_l0v3s_c00k135_a4dadb49}`
 
 ---
 
 ## Tools Used
 
 * **Web Browser** - Access the challenge
-* **View Page Source (Ctrl+U)** - Inspect HTML and linked files
-* **Browser Developer Tools (F12)** - Alternative inspection method
+* **Browser Developer Tools (F12)** - Inspect and modify cookies
+* **Application/Storage Tab** - View and edit cookie values
 
 ---
 
 ## Key Takeaways
 
-* Always inspect **all** files used by a webpage (HTML, CSS, JS)
-* Comments in code can contain sensitive information
-* External resources (CSS, JS files) can hide important data
-* Use "View Source" to see all linked files easily
-* Multi-part flags teach you to be thorough in your inspection
-* Never leave sensitive data in client-side comments
+* Cookies can be easily viewed and modified by users
+* Never store sensitive data or make security decisions based on cookies alone
+* Cookie values should be validated server-side
+* Users have full control over their cookies
+* Always inspect cookies when investigating web applications
+* Incrementing values (0, 1, 2, ...) is a common testing technique for finding hidden content
