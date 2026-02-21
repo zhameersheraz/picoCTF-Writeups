@@ -213,3 +213,4 @@ strings ukn_reality.jpg | grep "picoCTF"
 * Real-world privacy concern: Images often contain more information than visible in the picture itself
 * Always strip metadata (using `exiftool -all=`) before sharing sensitive photos
 * The challenge name "CanYouSee" hints that you need to "see" hidden metadata
+
