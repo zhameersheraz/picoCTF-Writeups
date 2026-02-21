@@ -174,3 +174,4 @@ xdg-open file.jpg
 * JPEG files must start with `FF D8`
 * Hex editors let you modify individual bytes
 * Sometimes just 2 bytes can make the difference between a broken file and a working one
+
