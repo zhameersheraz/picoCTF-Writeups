@@ -1,4 +1,4 @@
-# Flag in Flames - picoCTF Writeup
+# Flag in Flame - picoCTF Writeup
 
 **Challenge:** Flag in Flames  
 **Category:** Forensics  
