@@ -1,129 +1,112 @@
-# Hidden in plainsight - picoCTF Writeup
+# Hidden in Plainsight — picoCTF Writeup
 
-**Challenge:** Hidden in plainsight  
+**Challenge:** Hidden in Plainsight  
 **Category:** Forensics  
 **Difficulty:** Easy  
-**Points:** (not specified)  
-**Flag:** `picoCTF{h1dd3n_1n_1m4g3_1c55ccd0}`
+**Flag:** `picoCTF{h1dd3n_1n_1m4g3_1c55ccd0}`  
 
 ---
 
 ## Description
-This challenge provides a JPG image file with a hidden payload tucked inside.  
-The task is to discover and extract the hidden flag from the image file.
+
+> This challenge provides a JPG image file with a hidden payload tucked inside. The task is to discover and extract the hidden flag from the image file.
 
 ---
 
-## Approach
-Image files can hide data using steganography techniques.  
-The challenge title "Hidden in plainsight" suggested something was embedded in the image.  
-I needed to check the image metadata first, then look for steganographic tools.
+## Background Knowledge (Read This First!)
+
+### What is Steghide?
+
+`steghide` is a steganography tool that can hide files **inside** images without visibly altering them. It requires a password to extract the hidden data.
+
+### What is EXIF Metadata?
+
+EXIF metadata stores extra information about an image file (camera settings, GPS, copyright, custom fields). Tools like `exiftool` can read and write this metadata — and attackers can hide hints or passwords inside it.
+
+### What is Base64?
+
+Base64 converts binary data into readable ASCII text. It is not encryption — it is easily reversible. Common indicator: string ends with `=` or `==`.
 
 ---
 
-## Solution
+## Solution — Step by Step
 
-### Step 1: Download the Image
+### Step 1 — Download the Image
+
 I downloaded `img.jpg` from the challenge link provided.
 
-### Step 2: Extract Metadata
-I used `exiftool` to examine the image metadata:
-```bash
-exiftool img.jpg
+```
+┌──(zham㉿kali)-[~]
+└─$ cd /media/sf_downloads
 ```
 
-**Key Output:**
+### Step 2 — Extract Metadata
+
 ```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ exiftool img.jpg
+...
 Comment: c3RlZ2hpZGU6Y0VGNmVuZHZjbVE9
+...
 ```
 
-The Comment field contained a Base64-encoded string.
+The Comment field contained a suspicious Base64-encoded string.
 
-### Step 3: Decode the First Base64 Layer
-I decoded the comment field:
-```bash
-echo c3RlZ2hpZGU6Y0VGNmVuZHZjbVE9 | base64 -d
-```
+### Step 3 — Decode the First Base64 Layer
 
-**Result:**
 ```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ echo c3RlZ2hpZGU6Y0VGNmVuZHZjbVE9 | base64 -d
 steghide:cEF6endvcmQ=
 ```
 
-This revealed that `steghide` was used, and another Base64 string was present (likely the password).
+This revealed that `steghide` was used, and another Base64 string was the password.
 
-### Step 4: Decode the Password
-I decoded the second Base64 string:
-```bash
-echo cEF6endvcmQ= | base64 -d
-```
+### Step 4 — Decode the Password
 
-**Result:**
 ```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ echo cEF6endvcmQ= | base64 -d
 pAzzword
 ```
 
-This was the steghide password!
+✅ Password found: `pAzzword`
 
-### Step 5: Extract Hidden Data with Steghide
-I used `steghide` to extract the hidden file from the image:
-```bash
-steghide --extract -p pAzzword -sf img.jpg
-```
+### Step 5 — Extract Hidden Data with Steghide
 
-**Output:**
 ```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ steghide --extract -p pAzzword -sf img.jpg
 wrote extracted data to "flag.txt".
 ```
 
-### Step 6: Read the Flag
-I read the extracted file:
-```bash
-cat flag.txt
-```
+### Step 6 — Read the Flag
 
-**Result:**
 ```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ cat flag.txt
 picoCTF{h1dd3n_1n_1m4g3_1c55ccd0}
 ```
 
----
-
-## Why This Works
-Steganography tools like `steghide` can hide files inside images without visibly altering them.  
-The tool requires a password to extract the hidden data.  
-In this challenge, both the steganography tool name and the password were Base64-encoded and hidden in the image's metadata.
-
----
-
-## Steganography Tools Reference
-
-| Tool | Purpose | Common Usage |
-|------|---------|--------------|
-| `steghide` | Hide/extract data in images | `steghide --extract -sf image.jpg -p password` |
-| `stegsolve` | Analyze image layers and bits | GUI-based image analysis |
-| `binwalk` | Find embedded files in images | `binwalk -e image.jpg` |
-| `zsteg` | PNG/BMP steganography detection | `zsteg image.png --all` |
-| `exiftool` | Read/write image metadata | `exiftool image.jpg` |
-
----
-
-## Flag
-`picoCTF{h1dd3n_1n_1m4g3_1c55ccd0}`
+Got the flag! 🎯
 
 ---
 
 ## Tools Used
-* `exiftool` - Extract image metadata
-* `base64` - Decode Base64 strings (used twice)
-* `steghide` - Extract hidden data from images
-* `cat` - Read file contents
+
+| Tool | Purpose |
+|------|---------|
+| `exiftool` | Extract image metadata |
+| `base64` | Decode Base64 strings (used twice) |
+| `steghide` | Extract hidden data from images |
+| `cat` | Read file contents |
 
 ---
 
 ## Key Takeaways
-* Always check image metadata with `exiftool` - it often contains hints or hidden data.
-* Steganography is common in forensics challenges - learn tools like `steghide`, `stegsolve`, and `binwalk`.
-* Base64 encoding can be layered multiple times - decode iteratively.
-* The metadata comment field is a common place to hide passwords or hints.
-* Image files can look completely normal while containing hidden files inside.
+
+- Always check image metadata with `exiftool` — it often contains hints or hidden data
+- Steganography is common in forensics challenges — learn tools like `steghide`, `stegsolve`, and `binwalk`
+- Base64 encoding can be layered multiple times — decode iteratively
+- The metadata comment field is a common place to hide passwords or hints
+- Image files can look completely normal while containing hidden files inside
