@@ -1,174 +1,92 @@
-# Glory of the Garden - picoCTF Writeup
+# Glory of the Garden — picoCTF Writeup
 
 **Challenge:** Glory of the Garden  
 **Category:** Forensics  
 **Difficulty:** Easy  
-**Points:** (not specified)  
-**Flag:** `picoCTF{more_than_m33ts_the_3y339cbe6dc}`
+**Flag:** `picoCTF{more_than_m33ts_the_3y339cbe6dc}`  
 
 ---
 
 ## Description
 
-This file contains more than it seems.
+> This file contains more than it seems.
+> Get the flag from garden.jpg.
 
-Get the flag from garden.jpg.
-
----
-
-## Hints
-
-1. What is a hex editor?
+**Hint shown in challenge:** `What is a hex editor?`
 
 ---
 
-## Solution
+## Background Knowledge (Read This First!)
 
-### Step 1: Download the File
+### How can text hide inside an image?
 
-I downloaded the file `garden.jpg` from the challenge.
+Image files (JPEG, PNG, etc.) are binary files. Text can be appended or embedded inside the binary data **without affecting how the image looks** when opened. The `strings` command extracts all printable ASCII strings from any file — revealing hidden messages.
 
-### Step 2: Check the File Type
+### What is Steganography?
 
-First, I verified it was actually an image:
-```bash
-file garden.jpg
+Steganography is the practice of hiding data inside other files. In this challenge, text was simply appended to the end of a JPEG image — a basic but effective hiding technique.
+
+---
+
+## Solution — Step by Step
+
+### Step 1 — Download and Check the File
+
 ```
+┌──(zham㉿kali)-[~]
+└─$ cd /media/sf_downloads
 
-**Output:**
-```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ file garden.jpg
 garden.jpg: JPEG image data, JFIF standard 1.01
 ```
 
 It's a valid JPEG image file.
 
-### Step 3: Use strings Command
+### Step 2 — Use strings Command
 
-I used the `strings` command to extract all readable text from the file:
-```bash
-strings garden.jpg
 ```
-
-**Output:**
-```
-JFIF
-XICC_PROFILE
-HLino
-mntrRGB XYZ 
-acspMSFT
-IEC sRGB
--HP  
-cprt
-3desc
-...
-(lots of strings)
-...
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ strings garden.jpg | grep "picoCTF"
 Here is a flag: picoCTF{more_than_m33ts_the_3y339cbe6dc}
 ```
 
-### Step 4: Find the Flag
-
-At the very bottom of the strings output, I found:
-```
-Here is a flag: picoCTF{more_than_m33ts_the_3y339cbe6dc}
-```
+Got the flag! 🎯
 
 ---
 
-## Why This Works
-
-* Image files (JPEG, PNG, etc.) are binary files
-* Text can be hidden inside image files without affecting how they display
-* The **strings** command extracts all printable ASCII strings from any file
-* Hidden messages embedded in images can be found this way
-* This technique is common in **steganography** (hiding data inside other files)
-
----
-
-## What is the strings Command?
-
-The `strings` command finds and prints sequences of printable characters in a file:
-
-**Basic usage:**
-```bash
-strings filename
-```
-
-**Useful options:**
-```bash
-# Show strings of minimum length 10
-strings -n 10 garden.jpg
-
-# Search for specific text
-strings garden.jpg | grep "picoCTF"
-
-# Save output to file
-strings garden.jpg > output.txt
-```
-
----
-
-## Alternative Method: Hex Editor
+## Alternative Method — Hex Editor
 
 As the hint suggests, you could also use a hex editor:
 
-1. Open `garden.jpg` in a hex editor (like `hexedit`, `ghex`, or online at https://hexed.it/)
-2. Scroll to the bottom of the file
-3. Look for ASCII text near the end
-4. Find the flag: `Here is a flag: picoCTF{more_than_m33ts_the_3y339cbe6dc}`
+1. Open `garden.jpg` in a hex editor (https://hexed.it/)
+2. Scroll to the **bottom** of the file
+3. Look for readable ASCII text near the end
+4. Find: `Here is a flag: picoCTF{more_than_m33ts_the_3y339cbe6dc}`
 
-**Using hexedit:**
 ```bash
+# Using hexedit
 hexedit garden.jpg
-# Press Ctrl+E to go to the end
-# Look for readable ASCII text
+# Press Ctrl+E to go to the end and look for readable text
 ```
-
----
-
-## Terminal Commands
-```bash
-# Navigate to downloads folder
-cd /media/sf_downloads
-
-# Check file type
-file garden.jpg
-
-# Extract strings and view all
-strings garden.jpg
-
-# Extract strings and search for flag
-strings garden.jpg | grep "picoCTF"
-
-# Extract strings and save to file
-strings garden.jpg > strings_output.txt
-
-# View the last few lines (where flag is)
-strings garden.jpg | tail -20
-```
-
----
-
-## Flag
-
-`picoCTF{more_than_m33ts_the_3y339cbe6dc}`
 
 ---
 
 ## Tools Used
 
-* **strings** - Extract printable strings from binary files
-* **file** - Check file type
-* **Hex editor** (optional) - View raw binary data
+| Tool | Purpose |
+|------|---------|
+| `file` | Check file type |
+| `strings` | Extract printable strings from binary files |
+| Hex editor (optional) | View raw binary data |
 
 ---
 
 ## Key Takeaways
 
-* Image files can contain hidden text data
-* The `strings` command is essential for forensics challenges
-* Always check files for embedded text, even if they appear to be just images
-* Steganography often hides data at the end of files
-* "More than meets the eye" challenges usually involve hidden data in images
-* Always try basic commands (strings, file, exiftool) before complex tools
-* The flag name references the phrase "more than meets the eye" (also a Transformers reference)
+- Image files can contain hidden text data that is invisible when the image is opened normally
+- The `strings` command is essential for forensics challenges
+- Always check files for embedded text even if they appear to be just images
+- Steganography often hides data at the end of files
+- Always try basic commands (`strings`, `file`, `exiftool`) before complex tools
+- The flag name references "more than meets the eye" — also a Transformers reference 🤖
