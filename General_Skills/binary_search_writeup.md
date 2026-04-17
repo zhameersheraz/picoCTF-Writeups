@@ -1,88 +1,27 @@
-# Binary Search - picoCTF Writeup
+# Binary Search — picoCTF Writeup
 
 **Challenge:** Binary Search  
 **Category:** General Skills  
 **Difficulty:** Easy  
-**Points:** (not specified)  
 **Flag:** `picoCTF{g00d_gu355_ee8225d0}`
 
 ---
 
 ## Description
 
-Want to play a game? As you use more of the shell, you might be interested in how they work! Binary search is a classic algorithm used to quickly find an item in a sorted list. Can you find the flag? You'll have 1000 possibilities and only 10 guesses.
+> Want to play a game? Binary search is a classic algorithm used to quickly find an item in a sorted list. Can you find the flag? You'll have 1000 possibilities and only 10 guesses.
+> Connect using: `ssh -p 49696 ctf-player@atlas.picoctf.net`
+> Password: `83dcefb7`
 
-Connect using:
-```
-ssh -p 49696 ctf-player@atlas.picoctf.net
-```
-Password: `83dcefb7`
+**Hint shown in challenge:** `Have you ever played hot or cold? Binary search is a bit like that.`
 
 ---
 
-## Hints
-
-1. Have you ever played hot or cold? Binary search is a bit like that.
-
----
-
-## Solution
-
-### Step 1: Download and Inspect the File
-
-I downloaded and extracted the challenge zip:
-
-```bash
-wget https://artifacts.picoctf.net/c_atlas/4/challenge.zip
-unzip challenge.zip
-```
-
-This extracted `guessing_game.sh` — a shell script for the binary search game.
-
-### Step 2: Connect via SSH
-
-```bash
-ssh -p 49696 ctf-player@atlas.picoctf.net
-```
-
-- Accepted the fingerprint with `yes`
-- Entered the password `83dcefb7` (note: password is hidden when typing)
-
-### Step 3: Play the Binary Search Game
-
-The game picks a number between **1 and 1000** and I have **10 guesses** to find it.
-
-The strategy is **Binary Search** — always guess the middle of the remaining range:
-
-```
-Guess 500 → Lower! (range: 1-499)
-Guess 400 → Lower! (range: 1-399)
-Guess 300 → Higher! (range: 301-399)
-Guess 350 → Higher! (range: 351-399)
-Guess 390 → Lower! (range: 351-389)
-Guess 388 → Lower! (range: 351-387)
-Guess 360 → Higher! (range: 361-387)
-Guess 370 → Lower! (range: 361-369)
-Guess 365 → Correct!
-```
-
-**Output:**
-```
-Congratulations! You guessed the correct number: 365
-Here's your flag: picoCTF{g00d_gu355_ee8225d0}
-```
-
-Got the flag! 🎯
-
----
-
-## Why This Works
+## Background Knowledge (Read This First!)
 
 ### What is Binary Search?
 
-**Binary Search** is an algorithm that finds a target number by repeatedly cutting the search range in half.
-
-Instead of guessing 1, 2, 3, 4... one by one (which could take up to 1000 guesses), binary search only needs at most **10 guesses** for a range of 1000 because:
+**Binary Search** finds a target number by repeatedly cutting the search range in half. Instead of guessing 1, 2, 3... one by one (up to 1000 guesses), binary search only needs at most **10 guesses** for a range of 1000:
 
 ```
 2^10 = 1024 > 1000
@@ -91,47 +30,58 @@ Instead of guessing 1, 2, 3, 4... one by one (which could take up to 1000 guesse
 ### The Strategy
 
 Always guess the **middle** of your current range:
-
 ```
-Start:        1 -------- 500 -------- 1000
-Too high:     1 ---- 250 ---- 500
-Too low:           250 ---- 375 ---- 500
-And so on...
+Start:     1 -------- 500 -------- 1000
+Too high:  1 ---- 250 ---- 500
+Too low:        250 ---- 375 ---- 500
 ```
 
-Each guess cuts the remaining possibilities in half, making it very efficient.
-
-### Simple Breakdown
-
-```
-Connect via SSH
-      |
-      v
-Game gives range: 1 to 1000
-      |
-      v
-Always guess the middle of the remaining range
-      |
-      v
-"Higher" = number is above your guess
-"Lower"  = number is below your guess
-      |
-      v
-Narrow down until correct
-      |
-      v
-Flag is revealed!
-```
+Each guess cuts the remaining possibilities in half.
 
 ---
 
-## Alternative Method: Script It
+## Solution — Step by Step
 
-You can automate the guessing with a Python script:
+### Step 1 — Connect via SSH
+
+```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ ssh -p 49696 ctf-player@atlas.picoctf.net
+```
+
+- Accepted the fingerprint with `yes`
+- Entered the password `83dcefb7`
+
+### Step 2 — Play the Binary Search Game
+
+The game picks a number between **1 and 1000** and I have **10 guesses**:
+
+```
+Guess 500 → Lower! (range: 1-499)
+Guess 250 → Higher! (range: 251-499)
+Guess 375 → Higher! (range: 376-499)
+Guess 437 → Lower! (range: 376-436)
+Guess 406 → Lower! (range: 376-405)
+Guess 390 → Higher! (range: 391-405)
+Guess 398 → Higher! (range: 399-405)
+Guess 402 → Lower! (range: 399-401)
+Guess 400 → Higher! (range: 401-401)
+Guess 401 → Correct!
+```
+
+**Output:**
+```
+Congratulations! You guessed the correct number: 401
+Here's your flag: picoCTF{g00d_gu355_ee8225d0}
+```
+
+Got the flag! 🎯
+
+---
+
+## Alternative Method — Python Script
 
 ```python
-import subprocess
-
 low, high = 1, 1000
 while low <= high:
     mid = (low + high) // 2
@@ -147,34 +97,10 @@ while low <= high:
 
 ---
 
-## Commands Used
-
-```bash
-# Download and extract
-wget https://artifacts.picoctf.net/c_atlas/4/challenge.zip
-unzip challenge.zip
-
-# Connect via SSH
-ssh -p 49696 ctf-player@atlas.picoctf.net
-# Password: 83dcefb7
-```
-
----
-
-## Flag
-
-```
-picoCTF{g00d_gu355_ee8225d0}
-```
-
----
-
 ## Tools Used
 
 | Tool | Purpose |
 |------|---------|
-| `wget` | Download the zip file |
-| `unzip` | Extract the zip file |
 | `ssh` | Connect to the game server |
 
 ---
