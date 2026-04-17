@@ -1,126 +1,109 @@
-# Rust fixme 1 - picoCTF Writeup
+# Rust fixme 1 — picoCTF Writeup
 
 **Challenge:** Rust fixme 1  
 **Category:** General Skills  
 **Difficulty:** Easy  
-**Points:** (not specified)  
 **Flag:** `picoCTF{4r3_y0u_4_ru$t4c30n_n0w?}`
 
 ---
 
 ## Description
 
-Have you heard of Rust? Fix the syntax errors in this Rust file to print the flag!
+> Have you ever heard of Rust? Fix the syntax errors in this Rust file to print the flag!
+> Download the Rust code here.
 
-Download the Rust code here.
-
----
-
-## Hints
-
-1. Cargo is Rust's package manager and will make your life easier. See the getting started page here.
+**Hint shown in challenge:** `Cargo is Rust's package manager and will make your life easier.`
 
 ---
 
-## Solution
+## Background Knowledge (Read This First!)
 
-### Step 1: Download and Extract the File
+### What is Rust?
 
-I downloaded the tar file and extracted it:
+**Rust** is a systems programming language known for memory safety and performance. Key syntax rules:
+- Every statement ends with `;`
+- Use `return` to exit a function early
+- Use `{}` in `println!` to print variables
 
-```bash
-wget https://challenge-files.picoctf.net/.../fixme1.tar.gz
-tar -xvzf fixme1.tar.gz
-cd fixme1
+### What is Cargo?
+
+**Cargo** is Rust's built-in package manager and build tool. Two commands used here:
+- `cargo build` — compiles the code and shows errors
+- `cargo run` — builds and runs the program
+
+---
+
+## Solution — Step by Step
+
+### Step 1 — Download and Extract the File
+
+```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ tar -xvzf fixme1.tar.gz
+└─$ cd fixme1
 ```
 
-This extracted:
+### Step 2 — Build to See Errors
+
 ```
-fixme1/
-fixme1/Cargo.toml
-fixme1/Cargo.lock
-fixme1/src/
-fixme1/src/main.rs
-```
-
-### Step 2: Try to Build and Read the Errors
-
-I ran `cargo build` to see what errors existed:
-
-```bash
-cargo build
+┌──(zham㉿kali)-[/media/sf_downloads/fixme1]
+└─$ cargo build
 ```
 
 **Errors found:**
 ```
 error: expected `;`, found keyword `let`
- --> src/main.rs:5:37
-  |
-5 |     let key = String::from("CSUCKS") // missing semicolon
+ --> src/main.rs:5:37  (missing semicolon)
 
 error: argument never used
-  --> src/main.rs:26:9
-  | ":?" // wrong format specifier
+  --> src/main.rs:26:9  (wrong format specifier ":?")
 
 error[E0425]: cannot find value `ret` in this scope
-  --> src/main.rs:18:9
-  | ret; // wrong return keyword
+  --> src/main.rs:18:9  (wrong return keyword)
 ```
 
 ✅ Found **3 syntax errors** to fix!
 
-### Step 3: Open and Fix the File
+### Step 3 — Fix the Errors
 
-```bash
-cd src
-nano main.rs
+```
+┌──(zham㉿kali)-[/media/sf_downloads/fixme1]
+└─$ nano src/main.rs
 ```
 
-**Fix 1: Missing semicolon at the end of the `key` statement**
-
+**Fix 1 — Missing semicolon:**
 ```rust
-// BEFORE (broken)
+// BEFORE
 let key = String::from("CSUCKS")
 
-// AFTER (fixed)
+// AFTER
 let key = String::from("CSUCKS");
 ```
 
-**Fix 2: Wrong return keyword (`ret` instead of `return`)**
-
+**Fix 2 — Wrong return keyword:**
 ```rust
-// BEFORE (broken)
+// BEFORE
 ret;
 
-// AFTER (fixed)
+// AFTER
 return;
 ```
 
-**Fix 3: Wrong println format specifier (`:?` instead of `{}`)**
-
+**Fix 3 — Wrong format specifier:**
 ```rust
-// BEFORE (broken)
-println!(
-    ":?",
-    String::from_utf8_lossy(&decrypted_buffer)
-);
+// BEFORE
+println!(":?", String::from_utf8_lossy(&decrypted_buffer));
 
-// AFTER (fixed)
-println!(
-    "{}",
-    String::from_utf8_lossy(&decrypted_buffer)
-);
+// AFTER
+println!("{}", String::from_utf8_lossy(&decrypted_buffer));
 ```
 
-### Step 4: Build and Run
+### Step 4 — Build and Run
 
-```bash
-cargo build
-cargo run
 ```
-
-**Output:**
-```
+┌──(zham㉿kali)-[/media/sf_downloads/fixme1]
+└─$ cargo build
+└─$ cargo run
 picoCTF{4r3_y0u_4_ru$t4c30n_n0w?}
 ```
 
@@ -128,72 +111,13 @@ Got the flag! 🎯
 
 ---
 
-## Why This Works
-
-### The 3 Syntax Errors Explained
+## The 3 Errors Explained
 
 | Error | Broken Code | Fixed Code | Reason |
 |-------|-------------|------------|--------|
-| Missing semicolon | `String::from("CSUCKS")` | `String::from("CSUCKS");` | In Rust, every statement must end with `;` |
-| Wrong return keyword | `ret;` | `return;` | The correct keyword in Rust is `return`, not `ret` |
-| Wrong format specifier | `":?"` | `"{}"` | In Rust's `println!`, use `{}` to print a variable |
-
-### What is Rust?
-
-**Rust** is a systems programming language known for memory safety and performance. Some key syntax rules:
-- Every statement ends with `;`
-- Use `return` to exit a function early
-- Use `{}` in `println!` to print variables
-
-### Simple Breakdown
-
-```
-Download file
-      |
-      v
-cargo build shows 3 errors
-      |
-      v
-Fix: add ";" after key statement
-Fix: change "ret" to "return"
-Fix: change ":?" to "{}"
-      |
-      v
-cargo build succeeds
-      |
-      v
-cargo run prints the flag!
-```
-
----
-
-## Commands Used
-
-```bash
-# Download and extract
-wget https://challenge-files.picoctf.net/.../fixme1.tar.gz
-tar -xvzf fixme1.tar.gz
-cd fixme1
-
-# Build to see errors
-cargo build
-
-# Fix the file
-cd src
-nano main.rs
-
-# Build and run after fixing
-cargo build
-cargo run
-```
-
----
-
-## Flag
-
-```
-picoCTF{4r3_y0u_4_ru$t4c30n_n0w?}
-```
+| Missing semicolon | `String::from("CSUCKS")` | `String::from("CSUCKS");` | Every statement in Rust must end with `;` |
+| Wrong return keyword | `ret;` | `return;` | The correct Rust keyword is `return`, not `ret` |
+| Wrong format specifier | `":?"` | `"{}"` | In `println!`, use `{}` to print a variable |
 
 ---
 
@@ -201,7 +125,6 @@ picoCTF{4r3_y0u_4_ru$t4c30n_n0w?}
 
 | Tool | Purpose |
 |------|---------|
-| `wget` | Download the tar file |
 | `tar` | Extract the tar file |
 | `cargo build` | Compile and show syntax errors |
 | `cargo run` | Run the fixed program |
