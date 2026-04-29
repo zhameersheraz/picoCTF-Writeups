@@ -200,3 +200,4 @@ After deposit 2: `balance = 0`, but `amount = 2^256-1` → `0 < 2^256-1` is **tr
 - **`uint256` wraps around** — `2^256 - 1 + 1 = 0`, not an error in old Solidity
 - **Integer overflows exist on-chain too** — this is how the infamous DAO and BEC token hacks happened in real life
 - The flag `Sm4r7_OverFL0ws_ExI5t` → "Smart Overflows Exist" — overflows are not just a C/binary problem
+
