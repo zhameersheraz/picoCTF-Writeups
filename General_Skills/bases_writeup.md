@@ -71,3 +71,4 @@ l3arn_th3_r0p35
 
 - **`echo "string" | base64 -d`** decodes any Base64 string in one command
 - The flag `l3arn_th3_r0p35` → "learn the ropes" — an introduction to Base64 encoding
+
