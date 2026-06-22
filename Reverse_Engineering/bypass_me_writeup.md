@@ -1,13 +1,13 @@
 # Bypass Me — picoCTF Writeup
 
-**Challenge:** Bypass Me
-**Category:** Reverse Engineering
-**Difficulty:** Medium
-**Points:** 100
-**Flag:** `picoCTF{d3bugg3r_p0w3r_is_4w3s0m3_b8f8478e}`
-**Platform:** picoCTF 2026
-**Writeup by:** zham
-
+**Challenge:** Bypass Me  
+**Category:** Reverse Engineering  
+**Difficulty:** Medium  
+**Points:** 100 
+**Flag:** `picoCTF{d3bugg3r_p0w3r_is_4w3s0m3_b8f8478e}`  
+**Platform:** picoCTF 2026  
+**Writeup by:** zham  
+ 
 ---
 
 ## Description
