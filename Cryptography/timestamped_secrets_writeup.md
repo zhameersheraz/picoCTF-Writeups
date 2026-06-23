@@ -284,3 +284,4 @@ The flag is `picoCTF{sa3S_sEc9t_91609b3c}`. Reading the inner word in two parts:
 - `sEc9t` → leet-speak for **"secret"** (9 stands in for `t`).
 
 So the body decodes to **"sAES sEcret"** — a tongue-in-cheek "AES secret" / "secrets secret," which fits the challenge title "Timestamped Secrets" perfectly: the entire flag is literally a secret that the AES-ECB key was derived from the timestamp. The trailing `91609b3c` is just a per-flag uniqueness nonce.
+
