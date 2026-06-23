@@ -1,12 +1,12 @@
 # m1n10n'5_53cr37 — picoCTF Writeup
 
-**Challenge:** m1n10n'5_53cr37 
-**Category:** Reverse Engineering 
-**Difficulty:** Medium  
-**Points:** 300 
-**Flag:** `picoCTF{1t_w4sn7_h4rd_unr4v3l1n9_th3_m0b1l3_c0d3}` 
-**Platform:** picoMini by CMU-Africa (2025) 
-**Writeup by:** zham 
+**Challenge:** m1n10n'5_53cr37   
+**Category:** Reverse Engineering   
+**Difficulty:** Medium    
+**Points:** 300   
+**Flag:** `picoCTF{1t_w4sn7_h4rd_unr4v3l1n9_th3_m0b1l3_c0d3}`   
+**Platform:** picoMini by CMU-Africa (2025)   
+**Writeup by:** zham   
 
 ---
 
