@@ -1,4 +1,4 @@
-# Substitution 1
+# Substitution 1 — picoCTF Writeup
 
 **Challenge:** Substitution 1  
 **Category:** Cryptography  
