@@ -270,3 +270,5 @@ This attack is a **substitution cipher** with a publicly known key (the maritime
 - **The picture's color palette is your first clue.** Five bright colors (red, white, blue, yellow, black) and clean geometric shapes (stripes, diamonds, dots) is a strong fingerprint for the maritime system specifically. Most other flag alphabets use different palettes or different geometries.
 
 **Flag wordplay decode:** the inner text `F1AG5AND5TUFF` is **"FLAGS AND STUFF"** written in light leet-speak, with the digit `1` standing in for the letter `L` (because they look similar) and the digit `5` standing in for the letter `S` (same reason). Reading it out loud: "flags and stuff." A self-aware joke from the challenge author — the whole challenge is literally a row of flags, and the punchline is more flags. The `F` bookends at both ends are a nice symmetric touch that frames the message.
+
+
