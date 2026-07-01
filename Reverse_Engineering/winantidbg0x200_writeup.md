@@ -341,3 +341,4 @@ Here is the full story of what the binary does, in order, when run normally on W
 - The `OutputDebugStringW` "hint" mechanism is the same as in 0x100 — only visible from inside a debugger.
 - Brute-forcing the round count is a perfectly valid strategy when you know the plaintext starts with `picoCTF{`. The transform is cheap, the search space is tiny, and you do not even need to read the disassembly carefully.
 - **Flag wordplay decode**: `picoCTF{0x200_debug_f0r_Win_e6b68f6e}` reads as *"0x200 debug for Win"*. The `0x200` matches the challenge name suffix (`WinAntiDbg0x200`), the suffix `e6b68f6e` is a random 32-bit hex tag used to make the flag unique per challenge instance, and the rest is the human-readable hint about the parent / child trick.
+
