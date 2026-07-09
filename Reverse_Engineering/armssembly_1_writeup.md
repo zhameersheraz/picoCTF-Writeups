@@ -4,7 +4,7 @@
 **Category:** Reverse Engineering  
 **Difficulty:** Medium  
 **Points:** 70  
-**Flag:** `picoCTF{000001d5}`  
+**Flag:** `picoCTF{000000e5}`  
 **Platform:** picoCTF 2021  
 **Writeup by:** zham  
 
@@ -26,6 +26,8 @@
 
 (The hint panel surfaces exactly one hint: "Shifts." That is the whole clue — `chall_1.S` is a short ARM64 assembly listing that uses a left-shift (`lsl`) as the heart of the calculation, and the comparison is a single `cmp w0, 0` at the end of `main`. There is no encryption, no obfuscation, no anti-RE. Read the file, find the math, solve for the input that makes the result equal to zero, convert to 32-bit hex.)
 
+> **Heads-up about randomized constants.** picoCTF regenerates the three numeric constants in this challenge per player instance, so the values inside any individual `chall_1.S` file you find online (or in a teammate's archive) will *not* match the values shown on your challenge page. **The "Variables" line on the challenge page is the source of truth.** For this writeup I am using my own instance's values: `a = 86, b = 3, c = 3`.
+
 ---
 
 ## Background Knowledge
@@ -42,7 +44,7 @@ ARM64 has 31 general-purpose 64-bit registers named `x0`–`x30`, plus a stack p
 This challenge adds three real instructions on top of the standard "stack-frame plumbing" (`str` / `ldr` / `add sp`):
 
 - **`lsl w0, w1, w0`** — *Logical Shift Left.* Take the value in `w1`, shift its bits left by the number in `w0`, and write the result to `w0`. Bits shifted off the high end are discarded; zeros are shifted in from the low end. For a 32-bit register, shifting left by `n` is exactly the same as multiplying by `2^n`. So `lsl w0, w1, w0` in this challenge is `w0 = w1 * 2^w0` (mod 2^32). The hint "Shifts" is pointing at this instruction.
-- **`sdiv w0, w1, w0`** — *Signed Divide.* Compute `w0 = w1 / w0` as a *signed* 32-bit integer division. Division truncates toward zero (so `1408 / 3 = 469`, not `469.333…`). ARM64 has both signed (`sdiv`) and unsigned (`udiv`) divide — for non-negative values in this challenge, both give the same answer.
+- **`sdiv w0, w1, w0`** — *Signed Divide.* Compute `w0 = w1 / w0` as a *signed* 32-bit integer division. Division truncates toward zero (so `688 / 3 = 229`, not `229.333…`). ARM64 has both signed (`sdiv`) and unsigned (`udiv`) divide — for non-negative values in this challenge, both give the same answer.
 - **`sub w0, w1, w0`** — *Subtract.* Compute `w0 = w1 - w0`. Standard two-operand subtract, same idea as x86's `sub eax, ebx` (except ARM writes the *first source* into the destination, not the second).
 
 There are no branches in `func` — no `b`, no `b.eq`, no `bls`. The whole function is a straight-line calculation; the only branch in the program is in `main` (`bne .L4`), where it decides which string to print.
@@ -54,12 +56,32 @@ This is a new shape for an `ARMssembly` challenge: instead of asking "what does 
 Once you read the four real instructions in order, `func` collapses to:
 
 ```
-return ((b << shamt) / c) - a;
+return ((a << b) / c) - input;
 ```
 
-where `a` is the input argument, `b` and `c` are hard-coded constants, and `shamt` is the shift amount. There is nothing else going on. (The variables in the challenge description — `a = 86, b = 3, c = 3` — are the names from the *original C source*. The compiled assembly in this instance uses different literal values: `b = 88`, `c = 3`, `shamt = 4`. Always trust the assembly, not the variable name table on the challenge page — the variable-name table is sometimes a copy-paste from a sibling challenge.)
+where `a`, `b`, `c` are the three constants from the challenge page, and `input` is the argument. In my instance the values are `a = 86, b = 3, c = 3`, so:
 
-**6. `main` is `atoi` once, `func` once, and a `cmp`/`bne`.**
+```
+return ((86 << 3) / 3) - input
+     = (688 / 3) - input
+     = 229 - input
+```
+
+For the win-condition `func(input) == 0` we need `input = 229`.
+
+**6. The mapping from the "Variables" line to the stack slots is fixed across instances.**
+The order in which the three constants are written to the stack never changes — only the values do. The order is:
+
+| Challenge name | Stack slot | Value (my instance) |
+|----------------|------------|--------------------|
+| `a`            | `[sp+16]`  | 86                 |
+| `b`            | `[sp+20]`  | 3                  |
+| `c`            | `[sp+24]`  | 3                  |
+| (input)        | `[sp+12]`  | (the unknown)      |
+
+So if your instance's variables line says "Variables: a = 79, b = 7, c = 3", the formula is `((79 << 7) / 3) - input`, and the answer is `((79 << 7) // 3) = 3370` → flag `picoCTF{00000d2a}`. The shape is identical; only the three numbers change.
+
+**7. `main` is `atoi` once, `func` once, and a `cmp`/`bne`.**
 `main` reads `argv[1]`, calls `atoi` on it, calls `func`, and compares the result against zero. If the result is zero, it jumps over the loss branch and prints `"You win!"`; otherwise it falls through to `"You Lose :("`. So the win-condition is *literally* `func(input) == 0`.
 
 ---
@@ -102,38 +124,40 @@ The `bls` at line 28 is the "filler" comment in my grep — it is the same boile
 
 ### 2. Read `func` — the math
 
-`func` is short. Stripped of the `str`/`ldr` boilerplate (which is just saving/loading stack slots so the registers can be reused), the function does three real operations on the four stack values `[sp+12] = a` (the input), `[sp+16] = 88`, `[sp+20] = 4`, `[sp+24] = 3`:
+`func` is short. Stripped of the `str`/`ldr` boilerplate (which is just saving/loading stack slots so the registers can be reused), the function does three real operations on the four stack values: `[sp+12] = input`, `[sp+16] = a` (the first constant from the variables line), `[sp+20] = b` (the second constant, the shift amount), `[sp+24] = c` (the third constant, the divisor).
+
+For my instance (`a = 86, b = 3, c = 3`):
 
 ```
 func:
     sub  sp, sp, #32                ; allocate 32 bytes of stack
-    str  w0, [sp, 12]               ; [sp+12] = input argument  (call it 'a')
+    str  w0, [sp, 12]               ; [sp+12] = input argument
 
-    mov  w0, 88
-    str  w0, [sp, 16]               ; [sp+16] = 88              (call it 'b')
-
-    mov  w0, 4
-    str  w0, [sp, 20]               ; [sp+20] = 4               (call it 'shamt')
+    mov  w0, 86
+    str  w0, [sp, 16]               ; [sp+16] = a = 86
 
     mov  w0, 3
-    str  w0, [sp, 24]               ; [sp+24] = 3               (call it 'c')
+    str  w0, [sp, 20]               ; [sp+20] = b = 3  (shift amount)
 
-    ldr  w0, [sp, 20]               ; w0 = shamt = 4
-    ldr  w1, [sp, 16]               ; w1 = b = 88
-    lsl  w0, w1, w0                 ; w0 = 88 << 4 = 1408
-    str  w0, [sp, 28]               ; [sp+28] = 1408
+    mov  w0, 3
+    str  w0, [sp, 24]               ; [sp+24] = c = 3  (divisor)
 
-    ldr  w1, [sp, 28]               ; w1 = 1408
+    ldr  w0, [sp, 20]               ; w0 = b = 3
+    ldr  w1, [sp, 16]               ; w1 = a = 86
+    lsl  w0, w1, w0                 ; w0 = 86 << 3 = 688
+    str  w0, [sp, 28]               ; [sp+28] = 688
+
+    ldr  w1, [sp, 28]               ; w1 = 688
     ldr  w0, [sp, 24]               ; w0 = c = 3
-    sdiv w0, w1, w0                 ; w0 = 1408 / 3 = 469       (integer division, truncated)
-    str  w0, [sp, 28]               ; [sp+28] = 469
+    sdiv w0, w1, w0                 ; w0 = 688 / 3 = 229       (integer division, truncated)
+    str  w0, [sp, 28]               ; [sp+28] = 229
 
-    ldr  w1, [sp, 28]               ; w1 = 469
-    ldr  w0, [sp, 12]               ; w0 = a  (the input)
-    sub  w0, w1, w0                 ; w0 = 469 - a
-    str  w0, [sp, 28]               ; [sp+28] = 469 - a
+    ldr  w1, [sp, 28]               ; w1 = 229
+    ldr  w0, [sp, 12]               ; w0 = input
+    sub  w0, w1, w0                 ; w0 = 229 - input
+    str  w0, [sp, 28]               ; [sp+28] = 229 - input
 
-    ldr  w0, [sp, 28]               ; return value: 469 - a
+    ldr  w0, [sp, 28]               ; return value: 229 - input
     add  sp, sp, 32
     ret
 ```
@@ -141,20 +165,20 @@ func:
 Translate to C:
 
 ```c
-int func(int a) {
-    int b = 88;
-    int shamt = 4;
+int func(int input) {
+    int a = 86;
+    int b = 3;
     int c = 3;
-    int tmp = b << shamt;       // 88 << 4 = 1408
-    tmp = tmp / c;              // 1408 / 3 = 469
-    return tmp - a;             // 469 - a
+    int tmp = a << b;          // 86 << 3 = 688
+    tmp = tmp / c;             // 688 / 3 = 229
+    return tmp - input;        // 229 - input
 }
 ```
 
-Or, as a single expression:
+Or, as a single expression using the variables from the challenge page:
 
 ```c
-return ((88 << 4) / 3) - a;
+return ((a << b) / c) - input;
 ```
 
 ### 3. Read `main` — the win check
@@ -174,9 +198,9 @@ main:
     bl   atoi                      ; w0 = atoi(argv[1])
     mov  w19, w0                   ; w19 = atoi(argv[1])  (cache in callee-saved)
     mov  w0, w19                   ; w0 = atoi(argv[1])  (prepare for func)
-    bl   func                      ; w0 = func(atoi(argv[1]))  = 469 - input
-    cmp  w0, 0                     ; flags = (469 - input) - 0
-    bne  .L4                       ; if 469 - input != 0, jump to "You Lose"
+    bl   func                      ; w0 = func(atoi(argv[1]))  = 229 - input
+    cmp  w0, 0                     ; flags = (229 - input) - 0
+    bne  .L4                       ; if 229 - input != 0, jump to "You Lose"
     adrp x0, .LC0
     add  x0, x0, :lo12:.LC0
     bl   puts                      ; puts("You win!")
@@ -196,8 +220,8 @@ In C this is:
 
 ```c
 int main(int argc, char **argv) {
-    int a = atoi(argv[1]);
-    if (func(a) == 0) {
+    int input = atoi(argv[1]);
+    if (func(input) == 0) {
         puts("You win!");
     } else {
         puts("You Lose :(");
@@ -206,39 +230,39 @@ int main(int argc, char **argv) {
 }
 ```
 
-The win-condition is `func(a) == 0`.
+The win-condition is `func(input) == 0`.
 
 ### 4. Solve the equation for the input
 
-Substitute the `func` expression:
+Substitute the `func` expression with the variables from the challenge page:
 
 ```
-((88 << 4) / 3) - a = 0
+((a << b) / c) - input = 0
 ```
 
-Evaluate the left-hand side:
+Evaluate the left-hand side with `a = 86, b = 3, c = 3`:
 
 ```
-88 << 4   = 88 * 2^4 = 88 * 16 = 1408
-1408 / 3  = 469        (truncated integer division; 469 * 3 = 1407, remainder 1)
+86 << 3   = 86 * 2^3 = 86 * 8 = 688
+688 / 3   = 229        (truncated integer division; 229 * 3 = 687, remainder 1)
 ```
 
 So the equation becomes:
 
 ```
-469 - a = 0
-a = 469
+229 - input = 0
+input = 229
 ```
 
 No need for the binary yet — Python is the fastest way to confirm:
 
 ```
 ┌──(zham㉿kali)-[~/armssembly-1]
-└─$ python3 -c "print(((88 << 4) // 3))"
-469
+└─$ python3 -c "print(((86 << 3) // 3))"
+229
 ```
 
-The input that wins is `469`.
+The input that wins is `229`.
 
 ### 5. Convert the integer to 32-bit hex
 
@@ -246,22 +270,22 @@ The flag format example in the challenge says `5614267 → 0055aabb`. That is *z
 
 ```
 ┌──(zham㉿kali)-[~/armssembly-1]
-└─$ python3 -c "print(469, '->', format(469, '08x'))"
-469 -> 000001d5
+└─$ python3 -c "print(229, '->', format(229, '08x'))"
+229 -> 000000e5
 ```
 
-So the hex is `000001d5`, and the flag is:
+So the hex is `000000e5`, and the flag is:
 
 ```
-picoCTF{000001d5}
+picoCTF{000000e5}
 ```
 
 ---
 
 ## Alternative Solves
 
-**A. Skip the reading — build and run the binary with `printf | nc` / direct invocation.**
-The cleanest sanity-check is to compile `chall_1.S`, then either pass `469` directly as `argv[1]` or pipe it in. ARM64 cross-toolchain + QEMU is a one-shot install on Kali:
+**A. Skip the reading — build and run the binary with `printf | qemu` / direct invocation.**
+The cleanest sanity-check is to compile `chall_1.S`, then either pass `229` directly as `argv[1]` or pipe it in. ARM64 cross-toolchain + QEMU is a one-shot install on Kali:
 
 ```
 ┌──(zham㉿kali)-[~/armssembly-1]
@@ -279,11 +303,11 @@ Compile statically so QEMU does not need the target dynamic linker (much faster,
 chall_1: ELF 64-bit LSB executable, ARM aarch64, version 1 (GNU/Linux), statically linked, ...
 
 ┌──(zham㉿kali)-[~/armssembly-1]
-└─$ qemu-aarch64-static ./chall_1 469
+└─$ qemu-aarch64-static ./chall_1 229
 You win!
 
 ┌──(zham㉿kali)-[~/armssembly-1]
-└─$ qemu-aarch64-static ./chall_1 468
+└─$ qemu-aarch64-static ./chall_1 228
 You Lose :(
 ```
 
@@ -291,7 +315,7 @@ Same answer. If you would rather see the `printf | nc` pattern (e.g. for a remot
 
 ```
 ┌──(zham㉿kali)-[~/armssembly-1]
-└─$ printf '469\n' | qemu-aarch64-static ./chall_1
+└─$ printf '229\n' | qemu-aarch64-static ./chall_1
 You win!
 ```
 
@@ -299,11 +323,11 @@ You win!
 
 ```
 ┌──(zham㉿kali)-[~/armssembly-1]
-└─$ python3 -c "print(format(469, '08x'))"
-000001d5
+└─$ python3 -c "print(format(229, '08x'))"
+000000e5
 ```
 
-Flag: `picoCTF{000001d5}`. This path is the right move if you do not yet trust your reading of the assembly, or if the next challenge in the series (`ARMssembly 2`, `3`) is too long to read by hand.
+Flag: `picoCTF{000000e5}`. This path is the right move if you do not yet trust your reading of the assembly, or if the next challenge in the series (`ARMssembly 2`, `3`) is too long to read by hand.
 
 **B. Skip ARM entirely — replicate `func` in Python and brute-force the input.**
 If the math is a little slippery, replicate `func` in Python, then sweep the input range to find the one that produces zero. For this challenge the math is simple enough that this is overkill, but the same template generalizes to the harder ARM challenges in the series:
@@ -311,20 +335,19 @@ If the math is a little slippery, replicate `func` in Python, then sweep the inp
 ```
 ┌──(zham㉿kali)-[~/armssembly-1]
 └─$ python3 -c "
-def func(a):
-    b = 88
-    shamt = 4
-    c = 3
-    return ((b << shamt) // c) - a
+def func(input, a, b, c):
+    return ((a << b) // c) - input
 
-for a in range(-5, 600):
-    if func(a) == 0:
-        print('input:', a, '  flag:', 'picoCTF{' + format(a & 0xFFFFFFFF, '08x') + '}')
+# Plug in the values from the challenge page:
+a, b, c = 86, 3, 3
+for i in range(-5, 600):
+    if func(i, a, b, c) == 0:
+        print('input:', i, '  flag:', 'picoCTF{' + format(i & 0xFFFFFFFF, '08x') + '}')
 "
-input: 469   flag: picoCTF{000001d5}
+input: 229   flag: picoCTF{000000e5}
 ```
 
-The `& 0xFFFFFFFF` is the "treat as unsigned 32-bit" mask — it does not matter for positive inputs like `469` (the mask is a no-op), but it is the right habit for ARM challenges where the input might be expected to be negative or where the program does its own bit-twiddling with `and`, `orr`, `eor`.
+The `& 0xFFFFFFFF` is the "treat as unsigned 32-bit" mask — it does not matter for positive inputs like `229` (the mask is a no-op), but it is the right habit for ARM challenges where the input might be expected to be negative or where the program does its own bit-twiddling with `and`, `orr`, `eor`. The `(a, b, c)` parameters make it trivial to reuse the same script on a different instance — just edit the three numbers at the top.
 
 **C. Use GDB on the cross-compiled binary.**
 If you have aarch64 GDB and prefer interactive debugging, you can watch the value of `w0` evolve as the four real instructions of `func` execute. That makes the math visible step-by-step:
@@ -356,7 +379,7 @@ Start the binary under QEMU paused for a debugger, then attach:
                   -ex 'print/x $w0' chall_1
 ```
 
-`func+40` is the `lsl` instruction; breakpoint there, `c` to run, and `info registers w0 w1` shows `w0 = 4` and `w1 = 88` (the two source operands for the shift). `si` steps one instruction at a time: after the `lsl`, `w0 = 1408`; after the `sdiv`, `w0 = 469`; after the `sub` (with `a = 0` from our test input), `w0 = 469`. `finish` runs the rest of `func` and `print/x $w0` shows the return value in hex. Useful when the next challenge in the series hides the shift amount or the divisor behind a runtime-computed register.
+`func+40` is the `lsl` instruction; breakpoint there, `c` to run, and `info registers w0 w1` shows `w0 = 3` and `w1 = 86` (the two source operands for the shift). `si` steps one instruction at a time: after the `lsl`, `w0 = 688`; after the `sdiv`, `w0 = 229`; after the `sub` (with `input = 0` from our test argument), `w0 = 229`. `finish` runs the rest of `func` and `print/x $w0` shows the return value in hex. Useful when the next challenge in the series hides the shift amount or the divisor behind a runtime-computed register.
 
 ---
 
@@ -366,20 +389,20 @@ Start the binary under QEMU paused for a debugger, then attach:
 2. `main` saved the frame pointer (`x29`) and link register (`x30`) on the stack with `stp x29, x30, [sp, -48]!`. The `!` is the "pre-index" — the stack pointer is decremented *before* the store, and the new `sp` is written back. The 48 bytes give us room to save the `argc` and `argv` values plus the callee-saved register `x19`.
 3. `add x29, sp, 0` set up the frame pointer so locals can be addressed as `[x29+28]`, `[x29+16]`, etc.
 4. `str w0, [x29, 28]` saved `argc`, and `str x1, [x29, 16]` saved `argv`.
-5. `ldr x0, [x29, 16]` reloaded `argv`, then `add x0, x0, 8` advanced by 8 bytes (one pointer width) to point at `argv[1]`. `ldr x0, [x0]` dereferenced that pointer to get the `char *` for the first user argument. `bl atoi` converted it to `int` and returned it in `w0`. The result (`469` for the win input) was moved to `w19` for safekeeping — `x19` is callee-saved, so the upcoming `func` call will preserve it.
+5. `ldr x0, [x29, 16]` reloaded `argv`, then `add x0, x0, 8` advanced by 8 bytes (one pointer width) to point at `argv[1]`. `ldr x0, [x0]` dereferenced that pointer to get the `char *` for the first user argument. `bl atoi` converted it to `int` and returned it in `w0`. The result (`229` for the win input) was moved to `w19` for safekeeping — `x19` is callee-saved, so the upcoming `func` call will preserve it.
 6. `mov w0, w19` set up the argument register `w0` for `func`. `bl func` jumped to `func`.
 7. Inside `func`:
    - 32 bytes of stack were allocated with `sub sp, sp, #32`.
-   - The input (`w0 = 469`) was stored at `[sp+12]` (call it `a`).
-   - The constants were stored: `88` at `[sp+16]` (call it `b`), `4` at `[sp+20]` (call it `shamt`), `3` at `[sp+24]` (call it `c`).
-   - The shift happened: `lsl w0, w1, w0` with `w0 = 4` (shamt) and `w1 = 88` (b) gave `w0 = 88 << 4 = 1408`. The hint "Shifts" was pointing at this instruction. Stored to `[sp+28]`.
-   - The divide happened: `sdiv w0, w1, w0` with `w1 = 1408` and `w0 = 3` gave `w0 = 1408 / 3 = 469` (integer division truncates, so `469.333…` becomes `469`). Stored to `[sp+28]`.
-   - The subtract happened: `sub w0, w1, w0` with `w1 = 469` and `w0 = 469` (the input) gave `w0 = 469 - 469 = 0`. Stored to `[sp+28]`.
+   - The input (`w0 = 229`) was stored at `[sp+12]`.
+   - The three constants from the challenge page were stored in order: `a = 86` at `[sp+16]`, `b = 3` at `[sp+20]`, `c = 3` at `[sp+24]`. (The order is fixed across instances; only the values change.)
+   - The shift happened: `lsl w0, w1, w0` with `w0 = 3` (`b`, the shift amount) and `w1 = 86` (`a`) gave `w0 = 86 << 3 = 688`. The hint "Shifts" was pointing at this instruction. Stored to `[sp+28]`.
+   - The divide happened: `sdiv w0, w1, w0` with `w1 = 688` and `w0 = 3` (`c`, the divisor) gave `w0 = 688 / 3 = 229` (integer division truncates, so `229.333…` becomes `229`). Stored to `[sp+28]`.
+   - The subtract happened: `sub w0, w1, w0` with `w1 = 229` and `w0 = 229` (the input) gave `w0 = 229 - 229 = 0`. Stored to `[sp+28]`.
    - `ldr w0, [sp, 28]` loaded the return value (`0`) into `w0`. The stack was deallocated with `add sp, sp, #32`. `ret` returned to `main`.
 8. Back in `main`, `cmp w0, 0` set the flags based on `0 - 0` (zero). The Z flag was set.
 9. `bne .L4` checked the Z flag — "branch if *not* equal" — and did *not* take the branch. Control fell through to the `adrp x0, .LC0` + `add x0, x0, :lo12:.LC0` pair, which formed the address of the `"You win!"` string, then `bl puts` wrote it to stdout.
 10. `b .L6` jumped over the loss branch to the function epilogue. `main` restored the callee-saved registers (`x19`, then `x29` and `x30`), set `w0 = 0` (the C `return 0`), and `ret`-ed.
-11. Linux / QEMU received the exit code `0` and the process ended. The final visible output was `You win!`, confirming that `469` was the correct input, which converts to `0x000001d5`, which becomes the flag `picoCTF{000001d5}`.
+11. Linux / QEMU received the exit code `0` and the process ended. The final visible output was `You win!`, confirming that `229` was the correct input, which converts to `0x000000e5`, which becomes the flag `picoCTF{000000e5}`.
 
 ---
 
@@ -390,7 +413,7 @@ Start the binary under QEMU paused for a debugger, then attach:
 | Kali Linux (VM)               | My standard CTF environment.                                |
 | `cat` / `grep`                | Read the assembly, jumped to the math instructions and the `bl func` / `cmp` lines. |
 | `wc -l`                       | Confirmed the file is 81 lines (small, fully readable by hand). |
-| `python3`                     | Computed `(88 << 4) // 3 = 469`, formatted the hex, and ran the alternative-solve replica of `func`. |
+| `python3`                     | Computed `(86 << 3) // 3 = 229`, formatted the hex, and ran the alternative-solve replica of `func`. |
 | `printf`                      | Piped the input in (alternative-solve path) — useful for the `nc`/`stdin` variants of later challenges. |
 | `gcc-aarch64-linux-gnu`       | Cross-compiled `chall_1.S` into an ARM64 ELF for the build-and-run path. |
 | `qemu-user-static`            | Ran the AArch64 binary on my x86-64 host without needing real ARM hardware. |
@@ -401,9 +424,10 @@ Start the binary under QEMU paused for a debugger, then attach:
 
 ## Key Takeaways
 
+- **picoCTF randomizes the numeric constants per instance.** Always read the "Variables" line on the challenge page and use *those* numbers — never trust the constants baked into a `chall_1.S` you found online, in a teammate's archive, or even in the file you happened to download earlier in the same competition. The assembly *structure* is fixed; the *values* are not.
 - ARM64's first eight arguments go in `x0`–`x7`; the return value comes back in `x0`. For 32-bit values, that means `w0`/`w1` and the return is in `w0`. The vast majority of "what does this assembly do?" questions on this platform collapse to "what is in `w0` at the `ret`?".
-- `lsl w0, w1, w0` is `w0 = w1 << w0` — a logical left shift, which for a 32-bit register is the same as multiplying by `2^shift_amount`. `lsl` discards bits shifted off the high end and shifts in zeros from the low end. The hint "Shifts" in this challenge is pointing at exactly this instruction. If the result is supposed to fit in 32 bits and the shift amount is "small" (say, under 24), the multiplication interpretation is the right one — and the only thing to worry about is the *signed* overflow that would happen if the result were used as a negative number downstream. In this challenge, no such downstream exists, so `88 << 4` is just `1408`.
-- `sdiv w0, w1, w0` is *signed* integer division. It truncates toward zero, the same way C `/` does on positive operands. For the values in this challenge (`1408 / 3`), it gives `469` with a remainder of `1`. ARM64 also has `udiv` for unsigned division — both give the same answer for non-negative operands, so the choice rarely matters for a beginner challenge.
+- `lsl w0, w1, w0` is `w0 = w1 << w0` — a logical left shift, which for a 32-bit register is the same as multiplying by `2^shift_amount`. `lsl` discards bits shifted off the high end and shifts in zeros from the low end. The hint "Shifts" in this challenge is pointing at exactly this instruction. If the result is supposed to fit in 32 bits and the shift amount is "small" (say, under 24), the multiplication interpretation is the right one — and the only thing to worry about is the *signed* overflow that would happen if the result were used as a negative number downstream. In this challenge, no such downstream exists, so `86 << 3` is just `688`.
+- `sdiv w0, w1, w0` is *signed* integer division. It truncates toward zero, the same way C `/` does on positive operands. For the values in this challenge (`688 / 3`), it gives `229` with a remainder of `1`. ARM64 also has `udiv` for unsigned division — both give the same answer for non-negative operands, so the choice rarely matters for a beginner challenge.
 - `sub w0, w1, w0` is the same subtract idea as x86 — first operand minus second operand, written to the destination (the *first* operand, in ARM syntax). It is the *first* source that gets overwritten, not the second. This trips up x86 readers; the trick is "ARM two-operand instructions always overwrite the first source."
 - The "solve-for-the-input" pattern — where the program returns a value derived from the input, and the win-condition is `func(input) == 0` — is the same shape as a `ret2win` binary-exploitation challenge, except the win-condition is checked by the program itself rather than by `win()` opening a shell. The technique is: read the math, set up an equation, solve for the input, convert to the flag format. This shape will keep showing up in picoCTF (`ARMssembly 2`, `ARMssembly 3`, `bit-o-asm-2`, etc.) and the time spent practicing it here is what makes the harder variants quick.
-- The flag wordplay: `000001d5` is just the 32-bit hex of `469`. The "shift by 4" in the math is the same operation as appending a hex nibble — `0x58 << 4 = 0x580`, and `0x1d << 4 = 0x1d0`. The shift contributes a trailing zero in the hex form, but the magic number is really `0x1d5` (`= 469`). The "0000" at the front is the flag format's zero-padding for the upper 24 bits, not part of the secret. If you remember the format rule (8 lowercase hex digits, zero-padded, no `0x`), the flag is just `format(469, '08x')` — one Python call, no calculator.
+- The flag wordplay: `000000e5` is just the 32-bit hex of `229`. The "shift by 3" in the math is the same operation as multiplying by 8 — `0x56 << 3 = 0x2b0`, and `86 << 3 = 688 = 0x2b0`. The magic number in the flag is `0xe5` (`= 229`), with the rest being flag-format padding. If you remember the format rule (8 lowercase hex digits, zero-padded, no `0x`), the flag is just `format(229, '08x')` — one Python call, no calculator.
