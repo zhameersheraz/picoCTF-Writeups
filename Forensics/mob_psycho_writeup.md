@@ -301,3 +301,4 @@ Read in chunks it becomes **"ax8m C0RU 6ve NX85 l4ax8m Cl"** — a leet-speak re
 - `52a5e2de` — the trailing nonce (8 hex chars = 4 bytes), unique per challenge instance. It exists to make sure the flag cannot be reused across regenerations of the artifact.
 
 The challenge name "Mob psycho" is a direct reference to the anime **Mob Psycho 100**. The wordplay is dense and not meant to be parsed exactly — it is just a hex-friendly encoding of syllables from the show's cast. The important lesson is the technique, not the wordplay.
+
