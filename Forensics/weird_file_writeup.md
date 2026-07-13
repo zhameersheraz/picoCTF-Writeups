@@ -436,3 +436,4 @@ Read in chunks it becomes **"m4cr0s r d4ng3r0us"** — leet-speak for **"macros 
 - `d4ng3r0us` → `dangerous` (`4` for `a`, `3` for `e`, `0` for `o`)
 
 The whole flag is the lesson in a single sentence: **macros are dangerous**. That is the only thing you needed to know to solve the challenge — open a `.docm`, look at the macro, decode whatever the macro tries to print, and remember that the exact same code path can drop real malware on a real machine if you let macros run by default. The challenge title "Weird File" and the description "What could go wrong if we let Word documents run programs?" are both pointing at the same punchline: a Word document should *not* be able to spawn `python`, and yet here we are, in 2026, still having to tell people not to enable macros.
+
