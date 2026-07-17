@@ -405,3 +405,4 @@ picoCTF{not_all_spaces_are_created_equal_<32-hex-hash>}
 The whole flag (the human-readable part) reads as **"not all spaces are created equal"** — a literal description of the lesson the challenge is teaching. The two "spaces" in this challenge (regular ASCII space and Unicode EM SPACE) look identical when rendered, but they are completely different characters with completely different bit patterns. The author is reminding you that the visual rendering is a *display* decision, not a *data* decision — the bytes are the bytes, regardless of how they look on screen.
 
 The trailing 32-character hex string (`f5d46aff52c6e17f9fd6317b33d2d783`) is a per-player unique tag, the same way most picoCTF flags have a hash suffix. It is not part of the lesson; it is just there so each player gets a different flag for the same plaintext (and so a leaked flag cannot be reused by another player). The lesson is in the human-readable prefix; the hash is the audit trail.
+
