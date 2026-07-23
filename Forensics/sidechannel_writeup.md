@@ -1,4 +1,4 @@
-# SideChannel
+# SideChannel — picoCTF Writeup
 
 **Challenge:** SideChannel  
 **Category:** Forensics  
