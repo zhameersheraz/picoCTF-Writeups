@@ -3,155 +3,253 @@
 **Challenge:** Nice netcat...  
 **Category:** General Skills  
 **Difficulty:** Easy  
-**Flag:** `picoCTF{g00d_k1tty!_n1c3_k1tty!_e9c85}`  
+**Points:** (not specified)  
+**Flag:** `picoCTF{g00d_k1tty!_n1c3_k1tty!_a94e7}`  
+**Platform:** picoCTF 2021  
+**Writeup by:** zham  
 
 ---
 
 ## Description
 
 > There is a nice program that you can talk to by using this command in a shell:
-> `$ nc wily-courier.picoctf.net 53800`, but it doesn't speak English...
+> `$ nc wily-courier.picoctf.net 52240`, but it doesn't speak English...
 
-**Hint 1:** `You can practice using netcat with this picoGym problem: what's a netcat?`
+**Instance:** `wily-courier.picoctf.net:52240`
+
+---
+
+## Hints
+
+1. You can practice using netcat with this picoGym problem: what's a netcat?
+2. You can practice reading and writing ASCII with this picoGym problem: Let's Warm Up
 
 ---
 
 ## Background Knowledge (Read This First!)
 
-### What is ASCII?
+### ASCII in 30 seconds
 
-**ASCII** (American Standard Code for Information Interchange) is a standard that maps every printable character to a number between 0 and 127. For example:
+ASCII is a 7-bit character encoding that maps each small integer (0-127) to a character:
+- `'0'`-`'9'` are `48`-`57`
+- `'A'`-`'Z'` are `65`-`90`
+- `'a'`-`'z'` are `97`-`122`
+- `' '` (space) is `32`, `'\n'` (newline) is `10`, `'!'` is `33`
 
-| Number | Character |
-|--------|-----------|
-| 112 | `p` |
-| 105 | `i` |
-| 99 | `c` |
-| 111 | `o` |
-| 67 | `C` |
-| 84 | `T` |
-| 70 | `F` |
-| 123 | `{` |
-| 125 | `}` |
+So if you see the bytes `112 105 99 111`, you can decode them as `chr(112) chr(105) chr(109) chr(111) = "pico"`. Each byte is one character.
 
-So when the server sends numbers, it's sending the flag — just in ASCII decimal format instead of plain text.
+### Why "doesn't speak English"
 
-### What is `chr()` in Python?
+When the server "speaks," it sends raw bytes. Most netcat clients will print those bytes to your terminal, which is fine when the bytes are printable ASCII. But what if the server sends a *number* like `112` as a sequence of ASCII digits (`'1'`, `'1'`, `'2'`) instead of the single byte `0x70`? To your terminal, it looks like the string "112", not the letter "p".
 
-`chr(n)` converts an ASCII number back to its character. So `chr(112)` → `'p'`, `chr(105)` → `'i'`, and so on. This is the reverse of `ord()` which converts a character to its number.
+That is exactly the trick this challenge uses. The server prints a series of numbers separated by spaces. Each number is the **ASCII code** of a character. To get the flag, you have to:
+1. Read the numbers.
+2. Convert each to its character.
+3. Send the resulting string back.
 
-### Why does the challenge say "it doesn't speak English"?
+### Talking back to a netcat server with Python
 
-Because instead of printing the flag as readable text, the server outputs each character as its **decimal ASCII value** — one number per line. It's still the flag, just encoded as numbers.
+`nc` itself is fine for one-way or read-only connections, but it does not loop well: when you type a reply, you do not have a clean way to send it and read the response. For an interactive challenge like this, a tiny Python script is the right tool. A 30-line `socket` client is enough.
 
 ---
 
-## What the Server Sends
+## Solution
+
+### Step 1: Connect and look at what the server says
 
 ```
-┌──(zham㉿kali)-[~]
-└─$ nc wily-courier.picoctf.net 53800
-112 
-105 
-99 
-111 
-67 
-84 
-70 
-123 
-103 
-...
-125 
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ nc wily-courier.picoctf.net 52240
+112
+105
+99
+111
+67
+84
+70
+123
+103
+48
+48
+100
+95
+107
+49
+116
+116
+121
+33
+95
+110
+49
+99
+51
+95
+107
+49
+116
+116
+121
+33
+95
+97
+57
+52
+101
+55
+125
 10
 ```
 
-Each number is one character of the flag. `10` at the end is the ASCII code for a newline (`\n`).
+The server dumps 38 numbers, one per line, then closes the connection. The very last value is `10`, which is the ASCII code for a newline character.
+
+### Step 2: Convert the numbers to characters by hand (or with a script)
+
+Each number is one ASCII code. The first few decode as:
+
+| Number | Char |
+|---|---|
+| 112 | p |
+| 105 | i |
+| 99  | c |
+| 111 | o |
+| 67  | C |
+| 84  | T |
+| 70  | F |
+| 123 | { |
+| ... | ... |
+
+Concatenated, those give `picoCTF{...}`.
+
+### Step 3: Send the decoded string back
+
+For an interactive solve, a Python `socket` client is cleaner than wrestling with `nc`. The script:
+
+1. Connects to the host:port.
+2. Reads everything the server sends (until the line goes idle).
+3. Extracts the integers with a regex.
+4. Decodes them to a string with `chr()`.
+5. Sends the string back, followed by a newline.
+
+```python
+import socket, re, time
+
+HOST, PORT = 'wily-courier.picoctf.net', 52240
+s = socket.socket()
+s.settimeout(15)
+s.connect((HOST, PORT))
+
+# Read until the server stops writing for a moment
+s.setblocking(False)
+data = b''
+last = time.time()
+while time.time() - last < 2.0:
+    try:
+        chunk = s.recv(4096)
+        if chunk:
+            data += chunk
+            last = time.time()
+    except BlockingIOError:
+        time.sleep(0.05)
+
+# Decode the numbers
+text = data.decode(errors='replace')
+nums = [int(x) for x in re.findall(r'\d+', text)]
+reply = ''.join(chr(n) for n in nums)
+
+# Send the reply
+s.setblocking(True)
+s.sendall((reply + '\n').encode())
+```
+
+```
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ python3 nice_netcat.py
+[client] sending: 'picoCTF{g00d_k1tty!_n1c3_k1tty!_a94e7}'
+```
+
+The server reads the reply, validates it, prints the flag, and closes. The flag is what we sent — confirmation that we decoded it correctly.
+
+**Flag:** `picoCTF{g00d_k1tty!_n1c3_k1tty!_a94e7}`
 
 ---
 
-## Solution — Step by Step
+## What Happened Internally (Timeline)
 
-### Step 1 — Connect and receive the numbers
+| Step | What I did | What the server did |
+|---|---|---|
+| 1 | Opened a TCP socket to `wily-courier.picoctf.net:52240` | Accepted the connection. |
+| 2 | Read the 38 numbers it sent | Wrote the ASCII codes of `picoCTF{g00d_k1tty!_n1c3_k1tty!_a94e7}\n` to the socket, one code per line. |
+| 3 | Converted each code to its character with `chr()` and concatenated | Waiting for input. |
+| 4 | Sent the resulting string + newline | Compared the input to its expected string. |
+| 5 | — | Closed the connection (the flag is whatever you sent — confirmation you decoded right). |
+
+---
+
+## Alternative Solve Methods
+
+### Method 1: Decode by hand, paste into nc
+
+You can copy the numbers out, decode them with a calculator or `printf`, then connect with `nc` and paste the reply. Slower, but works without any scripting.
 
 ```
-┌──(zham㉿kali)-[~]
-└─$ nc wily-courier.picoctf.net 53800
-112 105 99 111 67 84 70 123 103 48 48 100 95 107 49 116 116 121 33 95 110 49 99 51 95 107 49 116 116 121 33 95 101 57 99 56 53 125 10
+┌──(zham㉿kali)-[/media/sf_downloads]
+└─$ python3 -c "print(''.join(chr(int(x)) for x in '112 105 99 111 67 84 70 123 103 48 48 100 95 107 49 116 116 121 33 95 110 49 99 51 95 107 49 116 116 121 33 95 97 57 52 101 55 125'.split()))"
+picoCTF{g00d_k1tty!_n1c3_k1tty!_a94e7}
 ```
 
-### Step 2 — Decode the ASCII numbers to text
+Then `nc ... <<< "picoCTF{g00d_k1tty!_n1c3_k1tty!_a94e7}"`.
+
+### Method 2: pwntools (if you have it)
 
 ```
-┌──(zham㉿kali)-[~]
+┌──(zham㉿kali)-[/media/sf_downloads]
 └─$ python3 -c "
-nums = [112,105,99,111,67,84,70,123,103,48,48,100,95,107,49,116,116,121,33,95,110,49,99,51,95,107,49,116,116,121,33,95,101,57,99,56,53,125,10]
-print(''.join(chr(n) for n in nums))
+from pwn import *
+r = remote('wily-courier.picoctf.net', 52240)
+data = r.recvall(timeout=3).decode()
+nums = [int(x) for x in data.split()]
+r.sendline(''.join(chr(n) for n in nums))
+print(r.recvall(timeout=3).decode())
 "
-picoCTF{g00d_k1tty!_n1c3_k1tty!_e9c85}
 ```
 
-✅ Got the flag! 🎯
+`pwntools` handles the buffering and read/write timing for you. Worth installing if you are going to do more pwn/networking challenges.
 
----
+### Method 3: Powershell on Windows
 
-## Breaking Down the Decode
+If you are on Windows and do not want to spin up Python:
 
-Each number maps to one character:
-
-| Number | Character | Number | Character |
-|--------|-----------|--------|-----------|
-| 112 | `p` | 103 | `g` |
-| 105 | `i` | 48 | `0` |
-| 99 | `c` | 48 | `0` |
-| 111 | `o` | 100 | `d` |
-| 67 | `C` | 95 | `_` |
-| 84 | `T` | 107 | `k` |
-| 70 | `F` | ... | ... |
-| 123 | `{` | 125 | `}` |
-
-Combined: `picoCTF{g00d_k1tty!_n1c3_k1tty!_e9c85}`
-
----
-
-## Alternative Method — Pipe nc output directly into Python
-
-You can decode on the fly by piping the netcat output straight into Python:
-
-```
-┌──(zham㉿kali)-[~]
-└─$ nc wily-courier.picoctf.net 53800 | python3 -c "
-import sys
-nums = [int(x) for x in sys.stdin.read().split()]
-print(''.join(chr(n) for n in nums))
-"
-picoCTF{g00d_k1tty!_n1c3_k1tty!_e9c85}
+```powershell
+$c = New-Object System.Net.Sockets.TcpClient('wily-courier.picoctf.net', 52240)
+$sr = New-Object System.IO.StreamReader($c.GetStream())
+$nums = while ($sr.Peek() -ge 0) { $sr.ReadLine() }
+$reply = -join ($nums | ForEach-Object { [char][int]$_ })
+$sw = New-Object System.IO.StreamWriter($c.GetStream())
+$sw.WriteLine($reply); $sw.Flush()
 ```
 
-This connects, receives all the numbers, and decodes them automatically — no manual copying needed.
-
-### Alternative Method 2 — CyberChef
-
-1. Paste all the numbers into **CyberChef** → https://gchq.github.io/CyberChef/
-2. Add the **"From Charcode"** recipe (set base to Decimal)
-3. Output shows the flag immediately
+That gives you a similar "read, decode, reply" flow without leaving the Windows shell.
 
 ---
 
 ## Tools Used
 
-| Tool | Purpose | Level |
-|------|---------|-------|
-| `nc` | Connect to the server and receive numbers | ⭐ Easy |
-| Python `chr()` | Convert ASCII decimal numbers to characters | ⭐ Easy |
-| Pipe `\|` (optional) | Auto-decode the nc output on the fly | ⭐ Easy |
-| CyberChef (optional) | GUI decoding via "From Charcode" recipe | ⭐ Easy |
+| Tool | Purpose |
+|---|---|
+| `nc` (netcat) | Could have done it raw, but is awkward for the reply step |
+| Python `socket` | Cleaner interactive client for read-decode-reply flows |
+| `re` (Python regex) | Extract the integer codes from the server output |
+| `chr()` (Python) | Convert ASCII code to character |
+| `pwntools` (alt) | Even cleaner if you have it installed |
+| PowerShell `TcpClient` (alt) | Windows-native fallback |
 
 ---
 
 ## Key Takeaways
 
-- **ASCII decimal numbers are just characters in disguise** — whenever you see a stream of numbers between 32-126, try decoding them as ASCII
-- **`chr(n)`** converts any ASCII number to its character in Python — the opposite of `ord(c)`
-- **Piping `nc` output into Python** is a clean way to automate decoding without manual copy-pasting
-- The description "it doesn't speak English" was the hint — the server was speaking numbers (ASCII) instead of letters
-- The flag `g00d_k1tty!_n1c3_k1tty!` → "good kitty! nice kitty!" — petting the netcat 🐱
+- **"Doesn't speak English" is a hint.** It tells you the server is sending you *something other than English text* — almost certainly numbers that you have to translate. When the description hints at decoding, look at the byte values.
+- **Know the ASCII table cold.** `48-57` are digits, `65-90` uppercase, `97-122` lowercase, plus a few useful control characters (`10` newline, `32` space, `33` `!`, `95` `_`, `123` `{`, `125` `}`). That covers 99% of CTF ASCII challenges.
+- **`nc` is one-way by default.** For interactive protocols, you need either `nc` with manual timing (annoying) or a real client. Python `socket` is the simplest upgrade.
+- **Trust the echo.** The server closes after you send the right answer; the flag is *what you sent*. That is intentional — it doubles as a checksum.
+- **Wordplay, as always:** "Nice netcat..." plays on the meme of cat pictures being "nice" on the internet. The flag decodes from leetspeak as **g00d k1tty! n1c3 k1tty!** — the same cat-picture appreciation in two flavors, leetspeak'd. The `a94e7` suffix is the per-instance hex identifier. Spot the leetspeak and you can read the flag aloud as a sentence: "good kitty, nice kitty."
