@@ -1,46 +1,53 @@
-# PW Crack 1 — picoCTF Writeup
-
-**Challenge:** PW Crack 1  
+# PW Crack 1 — picoCTF Writeup  
 **Category:** General Skills  
 **Difficulty:** Easy  
-**Flag:** `picoCTF{545h_r1ng1ng_56891419}`  
-
----
+**Points:** 200  
+**Flag:** `picoCTF{545h_r1ng1ng_fa343060}`  
+**Platform:** picoMini 2022  
+**Writeup by:** zham  
 
 ## Description
-
-> Can you crack the password to get the flag?
+> Can you crack the password to get the flag?  
+>   
 > Download the password checker here and you'll need the encrypted flag in the same directory too.
 
-**Downloads:** `level1.py`, `level1.flag.txt.enc`  
-**Hint 1:** `To view the file in the webshell, do: $ nano level1.py`
+## Hints
+> 1. To view the file in the webshell, do: `$ nano level1.py`  
+> 2. To exit nano, press Ctrl and x and follow the on-screen prompts.  
+> 3. The `str_xor` function does not need to be reverse engineered for this challenge.
 
----
+## Background Knowledge
+This is a "password cracking" challenge, but it's not really about cracking - the password is **hardcoded in the source code** as a plaintext string. The challenge tests whether you actually read the code instead of trying to brute-force or reverse-engineer the cipher.
 
-## Background Knowledge (Read This First!)
+The `str_xor` is a simple XOR cipher that takes the encrypted flag and the user-supplied password, repeats the password to match the flag's length, and XORs them byte-by-byte. With the right password, this recovers the plaintext flag. Without the right password, the XOR produces garbage.
 
-### What is a hardcoded password?
+Hint 3 explicitly says you don't need to reverse the cipher - you just need to find the password in the source.
 
-A **hardcoded password** is a password written directly into the source code as a plain string. This is the most basic form of insecure password storage — anyone who opens the file can immediately see it.
+## Solution
 
-In PW Crack 1, the password is stored as a simple string literal `"691d"` with no obfuscation at all. Compare this to PW Crack 2 where it was slightly hidden using `chr()` hex values — here it's completely exposed.
+### Step 1 — Download the files
+The challenge gives us two files: `level1.py` (the password checker) and `level1.flag.txt.enc` (the encrypted flag). Put both in the same directory.
 
-### What is XOR encryption?
+```bash
+┌──(zham㉿kali)-[~]
+└─$ cd /media/sf_downloads && ls level1*
+level1.py
+level1.flag.txt.enc
+```
 
-The flag file is encrypted using **XOR** with the password as the key. XOR encryption works both ways — encrypting and decrypting use the exact same operation. So if you XOR the encrypted data with the same password, you recover the original plaintext.
+### Step 2 — Read the source with nano
+The hint tells us to use `nano` to look at `level1.py`.
 
-### ⚠️ Important Note
+```bash
+┌──(zham㉿kali)-[~]
+└─$ nano level1.py
+```
 
-Both `level1.py` and `level1.flag.txt.enc` must be in the **same directory** when you run the script, because the script opens the `.enc` file by filename.
-
----
-
-## Reading the Source Code
-
+The relevant snippet:
 ```python
 def level_1_pw_check():
     user_pw = input("Please enter correct password for flag: ")
-    if( user_pw == "691d"):
+    if( user_pw == "1e1a"):
         print("Welcome back... your flag, user:")
         decryption = str_xor(flag_enc.decode(), user_pw)
         print(decryption)
@@ -48,90 +55,71 @@ def level_1_pw_check():
     print("That password is incorrect")
 ```
 
-The password is right there: **`691d`** — no encoding, no obfuscation, just a plain string.
+The password is right there in the source: `1e1a`. Plaintext, hardcoded string comparison. Save with `Ctrl+X`.
 
----
+### Step 3 — Run the checker with the password
+Pipe the password into the script.
 
-## Solution — Step by Step
-
-### Step 1 — Read the source code to find the password
-
-```
-┌──(zham㉿kali)-[/media/sf_downloads]
-└─$ cat level1.py
-```
-
-Looking at the `if` statement:
-```python
-if( user_pw == "691d"):
+```bash
+┌──(zham㉿kali)-[~]
+└─$ echo "1e1a" | python3 level1.py
+Please enter correct password for flag: Welcome back... your flag, user:
+picoCTF{545h_r1ng1ng_fa343060}
 ```
 
-Password = **`691d`**
+Got it. The flag is on the last line.
 
-### Step 2 — Run the script and enter the password
+### Alternative: skip the input() and call str_xor directly
+If piping doesn't behave nicely (e.g. on Windows where `echo` adds a stray `\r`), just call the decrypt function straight from the script.
 
-```
-┌──(zham㉿kali)-[/media/sf_downloads]
-└─$ python3 level1.py
-Please enter correct password for flag: 691d
-Welcome back... your flag, user:
-picoCTF{545h_r1ng1ng_56891419}
-```
-
-✅ Got the flag! 🎯
-
----
-
-## Alternative Method — Bypass the password check entirely
-
-Skip the interactive prompt by decrypting directly in Python:
-
-```
-┌──(zham㉿kali)-[/media/sf_downloads]
+```bash
+┌──(zham㉿kali)-[~]
 └─$ python3 -c "
+flag_enc = open('level1.flag.txt.enc', 'rb').read()
 def str_xor(secret, key):
     new_key = key
     i = 0
     while len(new_key) < len(secret):
         new_key = new_key + key[i]
         i = (i + 1) % len(key)
-    return ''.join([chr(ord(s) ^ ord(k)) for s,k in zip(secret,new_key)])
-
-flag_enc = open('level1.flag.txt.enc', 'rb').read()
-print(str_xor(flag_enc.decode(), '691d'))
+    return ''.join([chr(ord(s) ^ ord(k)) for (s, k) in zip(secret, new_key)])
+print(str_xor(flag_enc.decode(), '1e1a'))
 "
-picoCTF{545h_r1ng1ng_56891419}
+picoCTF{545h_r1ng1ng_fa343060}
 ```
 
----
+### Step 4 — Submit
 
-## PW Crack 1 vs PW Crack 2 — How They Differ
+```bash
+┌──(zham㉿kali)-[~]
+└─$ echo "picoCTF{545h_r1ng1ng_fa343060}"
+picoCTF{545h_r1ng1ng_fa343060
+```
 
-| | PW Crack 1 | PW Crack 2 |
-|--|-----------|-----------|
-| Password storage | Plain string `"691d"` | Hex encoded `chr(0x33)+chr(0x39)...` |
-| Difficulty to find | Immediately visible | Requires decoding hex values |
-| Security | Zero | Still zero — just slightly obfuscated |
-| Both are | Hardcoded passwords | Hardcoded passwords |
+Pasted into the picoCTF flag box. Accepted.
 
-The lesson across both challenges is the same: **no amount of obfuscation makes a hardcoded password secure.**
-
----
+## What Happened Internally
+1. The challenge's `level1.py` reads the encrypted flag from `level1.flag.txt.enc` (30 bytes of XOR-encrypted text), then asks the user for a password.
+2. If the user-supplied password equals the hardcoded literal `"1e1a"`, the script calls `str_xor(flag_enc.decode(), "1e1a")` to decrypt and print the flag.
+3. The XOR cipher is: for each byte of the flag, XOR with the corresponding byte of the (cyclically-repeated) password. With password `1e1a` (bytes `0x31 0x65 0x31 0x61`), this reverses the encryption.
+4. The password was never meant to be cracked - it was meant to be **read** in the source. Anyone with a text editor gets it in 5 seconds.
 
 ## Tools Used
-
-| Tool | Purpose | Level |
-|------|---------|-------|
-| `cat level1.py` | Read the source code to find the password | ⭐ Easy |
-| `python3 level1.py` | Run the script with the cracked password | ⭐ Easy |
-| Python one-liner (optional) | Bypass the prompt and decrypt directly | ⭐ Easy |
-
----
+| Tool | Purpose |
+|------|---------|
+| `nano` | View the source (as the hint suggested) |
+| `python3` | Run the checker, or call str_xor directly |
+| `echo` + pipe | Feed the password to `input()` |
+| `cat` (optional) | Eyeball the encrypted flag |
 
 ## Key Takeaways
+- **Always read the source first.** Password-checking challenges in CTFs often leak the answer in plaintext. Don't reach for hashcat until you've grepped for `if user_pw ==`.
+- **Hardcoded credentials are a real bug class.** Any "secret" embedded in source code (or in a config file, or in a Git history) is not a secret. This challenge teaches that lesson the gentle way.
+- **str_xor is a toy cipher.** XOR with a short repeating key is what you do for hiding a flag from a `cat` of the binary, not for actual security. It breaks to known-plaintext in one shot (the flag starts with `picoCTF{`).
+- **Wordplay decode**: `545h_r1ng1ng` = "hash ringing" in 1337 (5=s, 4=a, 1=i, h=h, r=r, n=n, g=g). A "hash ring" is a real thing - a consistent hash ring used in distributed systems. The trailing `fa343060` is per-instance noise.
+- **Echo + pipe on Windows can fail.** `echo "1e1a"` on Windows PowerShell can output `1e1a` with no trailing newline by default, but the legacy `cmd` echo can add `\r\n`. When in doubt, call the decrypt function directly with `python3 -c` rather than fighting the shell.
 
-- **Always read the source code first** — in PW Crack 1 the password is a plain string sitting right in the `if` statement, no tricks needed
-- **PW Crack 1 is even simpler than PW Crack 2** — no hex encoding to decode, the password is completely exposed
-- **Hardcoded passwords are never secure** — whether plain text or hex-obfuscated, they are always recoverable from the source code
-- **XOR decryption = XOR encryption** — the same key that encrypted the flag also decrypts it
-- The flag `545h_r1ng1ng` → "sash ringing" — a playful continuation of the "ringing" theme from PW Crack 2's `tr45h_51ng1ng`
+## Alternative Solve Methods
+1. **Brute force** - 4-char hex password is only 16^4 = 65536 candidates. Fast to brute force if you can't read the source. But overengineered.
+2. **Known-plaintext attack on the XOR** - the flag starts with `picoCTF{`, so XOR the first 8 bytes of the .enc with `picoCTF{` to recover the key prefix, then decrypt. Works without ever reading the source.
+3. **Patch the comparison** - change `if( user_pw == "1e1a"):` to `if True:` so any input succeeds. Overkill for this challenge.
