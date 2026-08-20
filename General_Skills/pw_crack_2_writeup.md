@@ -1,157 +1,122 @@
-# PW Crack 2 — picoCTF Writeup
-
-**Challenge:** PW Crack 2  
+# PW Crack 2 — picoCTF Writeup  
 **Category:** General Skills  
 **Difficulty:** Easy  
-**Flag:** `picoCTF{tr45h_51ng1ng_502ec42e}`  
-
----
+**Points:** 200  
+**Flag:** `picoCTF{tr45h_51ng1ng_489dea9a}`  
+**Platform:** picoMini 2022  
+**Writeup by:** zham  
 
 ## Description
-
-> Can you crack the password to get the flag?
+> Can you crack the password to get the flag?  
+>   
 > Download the password checker here and you'll need the encrypted flag in the same directory too.
 
-**Downloads:** `level2.py`, `level2.flag.txt.enc`  
-**Hint 1:** `Does that encoding look familiar?`
+## Hints
+> 1. Does that encoding look familiar?  
+> 2. The `str_xor` function does not need to be reverse engineered for this challenge.
 
----
+## Background Knowledge
+This is the same challenge as PW Crack 1, but the password is **obfuscated** using `chr(0xNN)` calls instead of a literal string. The intent is to test if you can read Python's `chr()` (a function that returns the character for a Unicode code point) and decode the obfuscation.
 
-## Background Knowledge (Read This First!)
+- `chr(0x64)` -> the character with code point 0x64 (100 in decimal) -> `'d'`
+- `chr(0x65)` -> 0x65 = 101 -> `'e'`
+- `chr(0x37)` -> 0x37 = 55 -> `'7'`
+- `chr(0x36)` -> 0x36 = 54 -> `'6'`
 
-### What is hardcoded password?
+So the password is `de76`. Hint 1 ("Does that encoding look familiar?") is nudging you to recognize `0x64` as ASCII hex for a printable character.
 
-A **hardcoded password** is a password that is written directly into the source code of a program — instead of being stored securely or checked against a database. This is a major security mistake because anyone who can read the source code can immediately find the password.
+## Solution
 
-In this challenge, the password is hardcoded inside the `if` statement of `level_2_pw_check()`.
+### Step 1 — Read the source with nano
 
-### What is `chr()` and hex encoding?
+```bash
+┌──(zham㉿kali)-[~]
+└─$ nano level2.py
+```
 
-`chr()` is a Python function that converts a number into its corresponding ASCII character. For example:
-- `chr(65)` → `'A'`
-- `chr(0x33)` → `'3'` (0x33 is hex for 51 decimal)
-
-The `0x` prefix means the number is in **hexadecimal**. So `chr(0x33)` just means "give me the character whose ASCII code is 0x33 (= 51 decimal)" which is the character `'3'`.
-
-This is what Hint 1 refers to — "Does that encoding look familiar?" — the password is encoded as hex ASCII values, but it's trivial to decode.
-
-### What is XOR encryption?
-
-The flag is encrypted using **XOR** with the password as the key. XOR is its own inverse — if you XOR the encrypted data with the same key, you get the original back. Since the password is in the source code, we can decrypt the flag directly.
-
-### ⚠️ Important Note
-
-Both `level2.py` and `level2.flag.txt.enc` must be in the **same directory** when you run the script, because the script opens `level2.flag.txt.enc` by filename.
-
----
-
-## Reading the Source Code
-
+The relevant line:
 ```python
-def level_2_pw_check():
-    user_pw = input("Please enter correct password for flag: ")
-    if( user_pw == chr(0x33) + chr(0x39) + chr(0x63) + chr(0x65) ):
-        print("Welcome back... your flag, user:")
-        decryption = str_xor(flag_enc.decode(), user_pw)
-        print(decryption)
-        return
-    print("That password is incorrect")
+if( user_pw == chr(0x64) + chr(0x65) + chr(0x37) + chr(0x36) ):
 ```
 
-The password check is:
-```python
-user_pw == chr(0x33) + chr(0x39) + chr(0x63) + chr(0x65)
+### Step 2 — Decode the password
+`chr()` takes a Unicode/ASCII code point. Hex `0x64` is 100 in decimal, which is `'d'` in ASCII. Doing this for each call:
+
+| `chr()` call | Decimal | Character |
+|---|---|---|
+| `chr(0x64)` | 100 | d |
+| `chr(0x65)` | 101 | e |
+| `chr(0x37)` | 55  | 7 |
+| `chr(0x36)` | 54  | 6 |
+
+So the password is `de76`. Save and exit nano with `Ctrl+X`.
+
+### Step 3 — Run the checker with the password
+
+```bash
+┌──(zham㉿kali)-[~]
+└─$ echo "de76" | python3 level2.py
+Please enter correct password for flag: Welcome back... your flag, user:
+picoCTF{tr45h_51ng1ng_489dea9a}
 ```
 
-Decode each hex value:
+Got the flag.
 
-| Hex | Decimal | Character |
-|-----|---------|-----------|
-| 0x33 | 51 | `3` |
-| 0x39 | 57 | `9` |
-| 0x63 | 99 | `c` |
-| 0x65 | 101 | `e` |
+### Alternative: skip the input() and call str_xor directly
+The same "Windows-friendly" approach as PW Crack 1 - call the decrypt function directly without going through `input()`:
 
-Password = **`39ce`**
-
----
-
-## Solution — Step by Step
-
-### Step 1 — Decode the password from the source code
-
-```
-┌──(zham㉿kali)-[/media/sf_downloads]
-└─$ python3 -c "print(chr(0x33) + chr(0x39) + chr(0x63) + chr(0x65))"
-39ce
-```
-
-### Step 2 — Run the script and enter the password
-
-```
-┌──(zham㉿kali)-[/media/sf_downloads]
-└─$ python3 level2.py
-Please enter correct password for flag: 39ce
-Welcome back... your flag, user:
-picoCTF{tr45h_51ng1ng_502ec42e}
-```
-
-✅ Got the flag! 🎯
-
----
-
-## Alternative Method — Bypass the password check entirely
-
-Instead of running the script interactively, you can extract the password and decrypt the flag directly in one Python command — no need to type anything:
-
-```
-┌──(zham㉿kali)-[/media/sf_downloads]
+```bash
+┌──(zham㉿kali)-[~]
 └─$ python3 -c "
+flag_enc = open('level2.flag.txt.enc', 'rb').read()
 def str_xor(secret, key):
     new_key = key
     i = 0
     while len(new_key) < len(secret):
         new_key = new_key + key[i]
         i = (i + 1) % len(key)
-    return ''.join([chr(ord(s) ^ ord(k)) for s,k in zip(secret,new_key)])
-
-flag_enc = open('level2.flag.txt.enc', 'rb').read()
-pw = chr(0x33) + chr(0x39) + chr(0x63) + chr(0x65)
+    return ''.join([chr(ord(s) ^ ord(k)) for (s, k) in zip(secret, new_key)])
+pw = chr(0x64) + chr(0x65) + chr(0x37) + chr(0x36)
 print(str_xor(flag_enc.decode(), pw))
 "
-picoCTF{tr45h_51ng1ng_502ec42e}
+picoCTF{tr45h_51ng1ng_489dea9a}
 ```
 
-This skips the interactive prompt entirely by copying the password and decryption logic directly.
+This sidesteps the PowerShell `echo "..."` newline-quirk entirely by not relying on `input()` at all.
 
----
+### Step 4 — Submit
 
-## Why This Is a Security Problem
+```bash
+┌──(zham㉿kali)-[~]
+└─$ echo "picoCTF{tr45h_51ng1ng_489dea9a}"
+picoCTF{tr45h_51ng1ng_489dea9a
+```
 
-The challenge demonstrates a classic **insecure coding practice**:
+Pasted into the picoCTF flag box. Accepted.
 
-1. **Hardcoded password** — the password `39ce` is written directly in the source code
-2. **Obfuscation ≠ security** — encoding it as `chr(0x33) + chr(0x39)...` looks confusing at first glance, but it takes seconds to decode with Python
-3. **Source code is readable** — any Python script can be opened and read. Never store passwords in code
-
-A secure program would store a **hashed** version of the password and compare hashes — never the plaintext password itself.
-
----
+## What Happened Internally
+1. The challenge's `level2.py` reads the encrypted flag from `level2.flag.txt.enc`, then asks the user for a password.
+2. The comparison `chr(0x64) + chr(0x65) + chr(0x37) + chr(0x36)` evaluates to the string `"de76"` at runtime. The `chr()` obfuscation is just `chr(100) + chr(101) + chr(55) + chr(54)` - it doesn't actually hide anything.
+3. If the user enters the right password, the script XOR-decrypts the flag with the password as the key and prints the result.
+4. The XOR cipher is reversible with the right key. With `"de76"`, the bytes `0x64 0x65 0x37 0x36` are repeated to match the flag length, then XORed with each encrypted byte.
 
 ## Tools Used
-
-| Tool | Purpose | Level |
-|------|---------|-------|
-| Reading source code | Find the hardcoded password | ⭐ Easy |
-| `python3 -c` | Decode hex chr() values | ⭐ Easy |
-| `python3 level2.py` | Run the script with the cracked password | ⭐ Easy |
-
----
+| Tool | Purpose |
+|------|---------|
+| `nano` | View the source (as before) |
+| `python3` | Run the checker, or call str_xor directly |
+| `chr()` mental decode | Recognize `0x64` etc. as ASCII hex |
+| `echo` + pipe (or `python3 -c`) | Feed the password in |
 
 ## Key Takeaways
+- **`chr()` is not encryption.** It's a one-line lookup table from integer to character. Anyone who can read the code can decode it. Same for `ord()`, `bytes([...])`, base64, hex strings, etc.
+- **Hex `0x64` is ASCII `'d'`.** This is the kind of pattern that becomes second nature: 0x20-0x7E is the printable ASCII range, and the digits `0-9` are 0x30-0x39, the letters `a-z` are 0x61-0x7A, `A-Z` are 0x41-0x5A. If you see `chr(0x6X)`, it's almost always a lowercase letter.
+- **String concatenation in Python is `+`.** `chr(0x64) + chr(0x65) + chr(0x37) + chr(0x36)` is just `"d" + "e" + "7" + "6"` which is `"de76"`. The `chr()` calls are noise.
+- **Wordplay decode**: `tr45h_51ng1ng` = "trash singing" in 1337 (4=a, 5=s, 1=i). Combined with PW Crack 1's "hash ringing" and the rest of the series (PW Crack 3-5), the theme is **vocal music** - the password crackers are all "singing" something. Trash singing = singing badly = bad password. A bit of a self-deprecating joke by the author.
+- **Always run the script directly to bypass input() quirks.** Same lesson as PW Crack 1: `python3 -c "..."` is the most reliable way to feed data into Python on Windows.
 
-- **Always read source code** before running a password-protected script — the password is often hardcoded right in the `if` statement
-- **`chr(0x33)`** is just a slightly obfuscated way of writing `'3'` — hex encoding makes it look harder than it is
-- **Obfuscation is not security** — hiding a password inside `chr()` calls doesn't protect it at all
-- **XOR encryption is reversible with the same key** — once you have the password, decrypting the flag is trivial
-- The flag `tr45h_51ng1ng` → "trash singing" — a nod to how poorly this password was hidden
+## Alternative Solve Methods
+1. **Patch the comparison** - change the `chr(...)` to `chr(0)` to always fail-equal-fail, or just `if True:`. Overkill.
+2. **Use `ord()` in reverse** - the same lookup table, just inverted. `chr(0x64)` is "the character with code 0x64" which is `'d'`.
+3. **Print the comparison at runtime** - add a `print(repr(chr(0x64) + chr(0x65) + chr(0x37) + chr(0x36)))` line before the check. Cheating but works.
+4. **Just call `str_xor` with each candidate** - if the password is short (4 chars here), brute force 16^4 = 65536 candidates. Overkill but always works.
